@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [setupToken, setSetupToken] = useState("");
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [registerForm, setRegisterForm] = useState({ 
     username: "", 
@@ -24,14 +25,18 @@ export default function AuthPage() {
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
   const [formTab, setFormTab] = useState("login");
+  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   
   const { 
     user, 
     loginMutation, 
     registerMutation, 
     verifyTwoFactorMutation,
+    setupTwoFactorMutation,
+    verifyTwoFactorSetupMutation,
     requires2FA,
     userId2FA,
+    twoFactorSetupData,
     calculatePasswordStrength
   } = useAuth();
   
@@ -52,6 +57,15 @@ export default function AuthPage() {
       setPasswordStrength(0);
     }
   }, [registerForm.password, calculatePasswordStrength]);
+  
+  // Show the 2FA setup UI when twoFactorSetupData is available
+  useEffect(() => {
+    if (twoFactorSetupData) {
+      setShowTwoFactorSetup(true);
+    } else {
+      setShowTwoFactorSetup(false);
+    }
+  }, [twoFactorSetupData]);
   
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
