@@ -5,12 +5,13 @@ import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { Shield, Clock, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -27,6 +28,22 @@ const emergencyRequestSchema = z.object({
 });
 
 type EmergencyRequestForm = z.infer<typeof emergencyRequestSchema>;
+
+const CustomTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+CustomTextarea.displayName = "CustomTextarea";
 
 export default function EmergencyRequestPage() {
   const { toast } = useToast();
@@ -191,7 +208,7 @@ export default function EmergencyRequestPage() {
                       <FormItem>
                         <FormLabel>Reason for Emergency Access</FormLabel>
                         <FormControl>
-                          <Textarea
+                          <CustomTextarea
                             placeholder="Please explain why you need emergency access to this vault..."
                             className="resize-none bg-[#0F172A] border-[#334155]"
                             rows={4}

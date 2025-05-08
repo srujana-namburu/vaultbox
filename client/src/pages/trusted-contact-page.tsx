@@ -16,12 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 const trustedContactSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
@@ -33,6 +34,22 @@ const trustedContactSchema = z.object({
 });
 
 type TrustedContactForm = z.infer<typeof trustedContactSchema>;
+
+const CustomTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+CustomTextarea.displayName = "CustomTextarea";
 
 export default function TrustedContactPage() {
   const { toast } = useToast();
@@ -197,6 +214,28 @@ export default function TrustedContactPage() {
   const daysSinceReset = calculateDaysSinceReset();
   const progressPercentage = calculateProgress();
 
+  // Add a helper to get status label and color
+  const getStatusLabel = (status: string) => {
+    if (status === 'active') return { label: 'Active', color: 'text-green-500' };
+    if (status === 'pending') return { label: 'Pending confirmation', color: 'text-yellow-500' };
+    if (status === 'declined') return { label: 'Declined', color: 'text-red-500' };
+    return { label: status, color: 'text-gray-400' };
+  };
+
+  // After addContactMutation, add polling/refetch logic
+  useEffect(() => {
+    if (addContactMutation.isSuccess) {
+      // Refetch trusted contacts every 5 seconds until status is active
+      const interval = setInterval(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/trusted-contacts'] });
+      }, 5000);
+      if (trustedContact && trustedContact[0]?.status === 'active') {
+        clearInterval(interval);
+      }
+      return () => clearInterval(interval);
+    }
+  }, [addContactMutation.isSuccess, trustedContact]);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <div className="flex flex-1 overflow-hidden">
@@ -350,7 +389,7 @@ export default function TrustedContactPage() {
                               <FormItem>
                                 <FormLabel>Personal Message (Optional)</FormLabel>
                                 <FormControl>
-                                  <Textarea
+                                  <CustomTextarea
                                     placeholder="Add a personal message for your trusted contact"
                                     className="resize-none"
                                     rows={4}
@@ -405,7 +444,7 @@ export default function TrustedContactPage() {
                                 </div>
                                 <Progress value={progressPercentage} className="h-2" />
                                 <p className="text-sm text-muted-foreground">
-                                  {trustedContact[0].inactivityPeriod - daysSinceReset} days remaining before emergency access can be requested
+                                  {Math.max(0, trustedContact[0].inactivityPeriod - daysSinceReset)} days remaining before emergency access can be requested
                                 </p>
                               </div>
                               
@@ -444,7 +483,7 @@ export default function TrustedContactPage() {
                               <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-5 w-5 text-muted-foreground" />
-                                  <span>48 hours</span>
+                                  <span>{trustedContact[0]?.waitingPeriod || "48 hours"}</span>
                                 </div>
                                 <Button
                                   variant="outline"

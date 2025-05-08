@@ -21,6 +21,8 @@ import { format } from "date-fns";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 // Define field types for various categories
 const fieldTemplates = {
@@ -55,6 +57,22 @@ const fieldTemplates = {
     { name: "field4", label: "Custom Field 4", type: "text" }
   ]
 };
+
+const CustomTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+CustomTextarea.displayName = "CustomTextarea";
 
 export default function NewEntry() {
   const [, navigate] = useLocation();
@@ -366,7 +384,7 @@ export default function NewEntry() {
                         <Label htmlFor={field.name}>{field.label}</Label>
                         
                         {field.type === 'textarea' ? (
-                          <Textarea
+                          <CustomTextarea
                             id={field.name}
                             placeholder={`Enter ${field.label.toLowerCase()}`}
                             value={fields[field.name] || ''}
@@ -431,7 +449,7 @@ export default function NewEntry() {
                   
                   <div className="space-y-2 mt-4">
                     <Label htmlFor="notes">Additional Notes</Label>
-                    <Textarea
+                    <CustomTextarea
                       id="notes"
                       placeholder="Add any additional notes or information here..."
                       value={notes}
@@ -444,7 +462,7 @@ export default function NewEntry() {
               
               {/* File Attachments */}
               <div className="bg-primary/40 rounded-xl p-6 shadow-neumorphic">
-                <h3 className="font-montserrat font-medium text-xl text-white mb-4">Attachments (Coming Soon)</h3>
+                <h3 className="font-montserrat font-medium text-xl text-white mb-4">Attachments</h3>
                 
                 <div className="space-y-4">
                   <div 
@@ -605,20 +623,15 @@ export default function NewEntry() {
                       
                       <div className="space-y-2">
                         <Label htmlFor="inactive-days">Share after inactive for</Label>
-                        <Select 
-                          value={inactiveDays.toString()} 
-                          onValueChange={(value) => setInactiveDays(parseInt(value))}
-                        >
-                          <SelectTrigger className="bg-[#1E293B]/50 border-primary">
-                            <SelectValue placeholder="Select days" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="30">30 days</SelectItem>
-                            <SelectItem value="60">60 days</SelectItem>
-                            <SelectItem value="90">90 days</SelectItem>
-                            <SelectItem value="180">180 days</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Input
+                          id="inactive-days"
+                          type="number"
+                          min={1}
+                          value={inactiveDays}
+                          onChange={e => setInactiveDays(Number(e.target.value))}
+                          className="bg-[#1E293B]/50 border-primary"
+                          placeholder="Enter number of days"
+                        />
                       </div>
                     </TabsContent>
                     

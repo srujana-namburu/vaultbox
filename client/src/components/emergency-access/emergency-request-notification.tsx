@@ -4,6 +4,8 @@ import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { AlertTriangle, CheckCircle, XCircle, Clock, ChevronRight, Loader2 } from 'lucide-react';
 import { format, formatDistance } from 'date-fns';
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -18,12 +20,27 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { Textarea } from '@/components/ui/textarea';
 import { AccessRequest, TrustedContact } from '@/lib/types';
 
 type EmergencyRequestNotificationProps = {
   userId: number;
 };
+
+const CustomTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+CustomTextarea.displayName = "CustomTextarea";
 
 export function EmergencyRequestNotification({ userId }: EmergencyRequestNotificationProps) {
   const { toast } = useToast();
@@ -275,7 +292,7 @@ export function EmergencyRequestNotification({ userId }: EmergencyRequestNotific
               {selectedRequest.status === 'pending' && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Response Note (Optional)</label>
-                  <Textarea 
+                  <CustomTextarea 
                     value={responseNote}
                     onChange={(e) => setResponseNote(e.target.value)}
                     placeholder="Add a note to your response..."

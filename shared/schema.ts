@@ -335,7 +335,9 @@ export const insertTrustedContactSchema = createInsertSchema(trustedContacts).pi
   inactivityPeriod: true,
   personalMessage: true,
   waitingPeriod: true,
-  notificationPreferences: true
+  notificationPreferences: true,
+  verificationCode: true,
+  invitationSentAt: true
 });
 
 export const insertSharedEntrySchema = createInsertSchema(sharedEntries).pick({

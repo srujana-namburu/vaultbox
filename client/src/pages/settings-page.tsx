@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -116,6 +116,22 @@ export default function SettingsPage() {
   const [disable2FAError, setDisable2FAError] = useState("");
   const disable2FAInputRef = useRef<HTMLInputElement>(null);
   const [disable2FAToken, setDisable2FAToken] = useState("");
+  const [sessionTimeout, setSessionTimeout] = useState(() => {
+    const stored = localStorage.getItem('sessionTimeoutMinutes');
+    return stored ? parseInt(stored, 10) : 30;
+  });
+  const [sessionTimeoutInput, setSessionTimeoutInput] = useState(sessionTimeout.toString());
+
+  useEffect(() => {
+    setSessionTimeoutInput(sessionTimeout.toString());
+  }, [sessionTimeout]);
+
+  const handleSessionTimeoutSave = () => {
+    const minutes = Math.max(1, parseInt(sessionTimeoutInput, 10) || 30);
+    setSessionTimeout(minutes);
+    localStorage.setItem('sessionTimeoutMinutes', minutes.toString());
+    toast({ title: 'Session Timeout Updated', description: `Session timeout set to ${minutes} minutes.` });
+  };
 
   // Profile form schema
   const profileFormSchema = z.object({
@@ -589,6 +605,28 @@ export default function SettingsPage() {
 
               {/* Notifications Tab */}
               <TabsContent value="notifications">
+                <Card className="bg-primary/40 border-0 shadow-neumorphic mb-8">
+                  <CardHeader>
+                    <CardTitle className="text-white">Session Timeout</CardTitle>
+                    <CardDescription>Set how many minutes before you are automatically logged out for inactivity.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={240}
+                        value={sessionTimeoutInput}
+                        onChange={e => setSessionTimeoutInput(e.target.value)}
+                        className="w-24"
+                      />
+                      <span className="text-gray-400">minutes</span>
+                      <Button onClick={handleSessionTimeoutSave} disabled={sessionTimeoutInput === sessionTimeout.toString()}>
+                        Save
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
                 <Card className="bg-primary/40 border-0 shadow-neumorphic">
                   <CardHeader>
                     <CardTitle className="text-white">Notification Preferences</CardTitle>

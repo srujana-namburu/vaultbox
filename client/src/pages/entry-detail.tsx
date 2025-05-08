@@ -4,7 +4,6 @@ import { useParams, Link, useLocation } from "wouter";
 import { Sidebar } from "@/components/ui/sidebar";
 import { MobileNav } from "@/components/ui/mobile-nav";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -29,7 +28,8 @@ import {
   Lock,
   Save,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import {
   AlertDialog,
@@ -44,6 +44,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { TrustedContactItem } from "@/components/ui/trusted-contact-item";
 import { format } from "date-fns";
+import * as React from "react";
+import { cn } from "@/lib/utils";
 
 // Helper type for decrypted content
 interface DecryptedContent {
@@ -52,8 +54,24 @@ interface DecryptedContent {
   attachments: Array<{ name: string, type: string }>;
 }
 
+const CustomTextarea = React.forwardRef<HTMLTextAreaElement, React.ComponentProps<"textarea">>(
+  ({ className, ...props }, ref) => {
+    return (
+      <textarea
+        className={cn(
+          "flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm shadow-black/5 transition-shadow placeholder:text-muted-foreground/70 focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50",
+          className,
+        )}
+        ref={ref}
+        {...props}
+      />
+    );
+  },
+);
+CustomTextarea.displayName = "CustomTextarea";
+
 export default function EntryDetail() {
-  const { id } = useParams();
+  const { id = "" } = useParams();
   const entryId = parseInt(id);
   const [, navigate] = useLocation();
   const { user } = useAuth();
@@ -239,29 +257,48 @@ export default function EntryDetail() {
   // Handle save updates
   const handleSaveUpdates = async () => {
     if (!entry || !decryptedContent) return;
-    
+
     try {
+      if (!decryptPassword) {
+        toast({
+          title: "Missing password",
+          description: "Please enter your password to encrypt the data.",
+          variant: "destructive",
+        });
+        return;
+      }
       // Create updated content object
       const updatedContent: DecryptedContent = {
         ...decryptedContent,
         fields: updatedFields,
         notes: updatedNotes
       };
-      
+
       // Encrypt the updated content
-      const key = await deriveKeyFromPassword(decryptPassword);
-      const encryptedContent = await encryptData(updatedContent, key);
-      
+      let key, encryptedContent;
+      try {
+        key = await deriveKeyFromPassword(decryptPassword);
+        encryptedContent = await encryptData(updatedContent, key);
+      } catch (err) {
+        console.error("Encryption error:", err);
+        toast({
+          title: "Encryption failed",
+          description: err instanceof Error ? err.message : String(err),
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Update the entry
       updateEntryMutation.mutate({
         content: encryptedContent
       });
-      
+
     } catch (error) {
       console.error("Update encryption error:", error);
       toast({
         title: "Update failed",
-        description: "Failed to encrypt updated content.",
+        description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
     }
@@ -432,7 +469,7 @@ export default function EntryDetail() {
             </Link>
             <h2 className="font-montserrat font-bold text-2xl text-white">{entry.title}</h2>
             <div className="ml-3">
-              <StatusBadge status={entry.status} />
+              <StatusBadge status={entry.status || ""} />
             </div>
           </div>
           
@@ -557,7 +594,7 @@ export default function EntryDetail() {
                       <div className="mb-6">
                         <Label className="block text-gray-400 text-sm mb-1">Notes</Label>
                         {editMode ? (
-                          <Textarea
+                          <CustomTextarea
                             value={updatedNotes}
                             onChange={e => setUpdatedNotes(e.target.value)}
                             className="bg-[#1E293B]/70 border-primary text-white min-h-[100px]"
@@ -630,7 +667,7 @@ export default function EntryDetail() {
                 <div>
                   <Label className="block text-gray-400 text-sm mb-1">Status</Label>
                   <div className="text-white">
-                    <StatusBadge status={entry.status} />
+                    <StatusBadge status={entry.status || ""} />
                   </div>
                 </div>
               </div>

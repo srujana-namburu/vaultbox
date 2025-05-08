@@ -19,6 +19,8 @@ import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { webSocketService } from "./services/websocket";
 import { notificationService } from "./services/notification";
+import crypto from "crypto";
+import { sendNotificationEmail } from "./services/email";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -265,7 +267,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trusted-contacts", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      
       // Check if user already has a trusted contact
       const existingContacts = await storage.getTrustedContacts(userId);
       if (existingContacts.length > 0) {
@@ -273,24 +274,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "You already have a trusted contact. Only one trusted contact is allowed per account." 
         });
       }
-      
+      // Generate a unique verification code
+      const verificationCode = crypto.randomBytes(32).toString("hex");
       const contactData = insertTrustedContactSchema.parse({ 
         ...req.body, 
         userId,
         status: 'pending',
         accessLevel: req.body.accessLevel || 'emergency_only',
-        lastInactivityResetDate: new Date()
+        lastInactivityResetDate: new Date(),
+        verificationCode,
+        invitationSentAt: new Date()
       });
-      
       const newContact = await storage.createTrustedContact(contactData);
-      
+      // Send confirmation email
+      const confirmUrl = `${process.env.BASE_URL || "http://localhost:3000"}/api/trusted-contacts/verify?code=${verificationCode}`;
+      await sendNotificationEmail(
+        newContact.email,
+        "Confirm your Trusted Contact Invitation",
+        `Hello ${newContact.name},\n\nYou have been invited as a trusted contact. Please confirm your invitation by clicking the button below.`,
+        confirmUrl,
+        "Confirm Invitation"
+      );
       // Log activity
       await storage.createActivityLog({
         userId,
         action: "contact_added",
-        details: `Added "${newContact.name}" as trusted contact`
+        details: `Added \"${newContact.name}\" as trusted contact`
       });
-      
       // Create notification for the user
       await storage.createNotification({
         userId,
@@ -299,10 +309,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         type: "contact_added",
         priority: "medium"
       });
-      
       res.status(201).json(newContact);
     } catch (err) {
       handleZodError(err, res);
+    }
+  });
+
+  // Trusted contact verification endpoint
+  app.get("/api/trusted-contacts/verify", async (req, res) => {
+    try {
+      const { code } = req.query;
+      if (!code || typeof code !== "string") {
+        return res.status(400).send("Invalid verification code.");
+      }
+      // Find the contact with this code
+      const db = storage.db;
+      const [contact] = await db.select().from(trustedContacts).where(eq(trustedContacts.verificationCode, code));
+      if (!contact) {
+        return res.status(404).send("Verification code not found or already used.");
+      }
+      // Mark as active and set verifiedAt
+      await storage.updateTrustedContact(contact.id, {
+        status: "active",
+        verifiedAt: new Date(),
+        verificationCode: null
+      });
+      // Optionally, redirect to a confirmation page or send a message
+      res.send("Your invitation has been confirmed. You are now a trusted contact.");
+    } catch (err) {
+      res.status(500).send("Failed to verify trusted contact.");
     }
   });
 
@@ -1261,6 +1296,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Database connection failed", 
         error: err instanceof Error ? err.message : String(err) 
       });
+    }
+  });
+
+  // Test email route
+  app.post("/api/test-email", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const success = await sendNotificationEmail(
+        email,
+        "Test Email from VaultBox",
+        "This is a test email to verify that the email service is working correctly.",
+        "https://vaultbox.app",
+        "Visit VaultBox"
+      );
+
+      if (success) {
+        res.json({ message: "Test email sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send test email" });
+      }
+    } catch (error) {
+      console.error("Error sending test email:", error);
+      res.status(500).json({ message: "Error sending test email" });
     }
   });
 

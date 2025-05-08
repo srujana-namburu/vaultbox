@@ -18,31 +18,52 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 import { SlidingNumber } from "./sliding-number";
 
 export function Sidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [timer, setTimer] = useState(30 * 60); // 30 minutes in seconds
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const prevLocation = useRef(location);
+  const initializedRef = useRef(false);
 
-  // Reset timer on navigation
+  // Only initialize timer once per session (not on every mount)
   useEffect(() => {
-    if (prevLocation.current !== location) {
-      setTimer(30 * 60);
-      prevLocation.current = location;
+    if (!initializedRef.current) {
+      const storedStart = localStorage.getItem('sessionTimerStart');
+      const storedTimeout = localStorage.getItem('sessionTimeoutMinutes');
+      const timeoutMinutes = storedTimeout ? parseInt(storedTimeout, 10) : 30;
+      if (storedStart) {
+        const elapsed = Math.floor((Date.now() - parseInt(storedStart, 10)) / 1000);
+        setTimer(Math.max(0, timeoutMinutes * 60 - elapsed));
+      } else {
+        setTimer(timeoutMinutes * 60);
+      }
+      initializedRef.current = true;
     }
-  }, [location]);
+  }, []);
+
+  // On login, reset timer and set new start time
+  useEffect(() => {
+    if (user) {
+      const now = Date.now();
+      const storedTimeout = localStorage.getItem('sessionTimeoutMinutes');
+      const timeoutMinutes = storedTimeout ? parseInt(storedTimeout, 10) : 30;
+      localStorage.setItem('sessionTimerStart', now.toString());
+      setTimer(timeoutMinutes * 60);
+    }
+  }, [user]);
 
   // Countdown effect
   useEffect(() => {
     if (timer <= 0) {
       logoutMutation.mutate();
+      localStorage.removeItem('sessionTimerStart');
+      setTimeout(() => navigate('/auth'), 500); // force redirect to sign-in page
       return;
     }
     timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [timer, logoutMutation]);
+  }, [timer, logoutMutation, navigate]);
   
   const handleLogout = () => {
     logoutMutation.mutate();

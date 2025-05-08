@@ -1,15 +1,31 @@
-import { MailService } from '@sendgrid/mail';
+import nodemailer from 'nodemailer';
 import { log } from '../vite';
 
-// Initialize SendGrid with API key
-const mailService = new MailService();
-
-if (process.env.SENDGRID_API_KEY) {
-  mailService.setApiKey(process.env.SENDGRID_API_KEY);
-  log('SendGrid initialized successfully', 'email-service');
-} else {
-  log('SENDGRID_API_KEY not found. Email functionality will be disabled.', 'email-service');
+// Email configuration
+interface EmailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
 }
+
+// Create reusable transporter object using SMTP transport
+const createTransporter = () => {
+  const config: EmailConfig = {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || ''
+    }
+  };
+
+  return nodemailer.createTransport(config);
+};
 
 interface EmailParams {
   to: string;
@@ -21,21 +37,23 @@ interface EmailParams {
 }
 
 /**
- * Send an email using SendGrid
+ * Send an email using Nodemailer
  */
 export async function sendEmail(params: EmailParams): Promise<boolean> {
-  if (!process.env.SENDGRID_API_KEY) {
-    log('Cannot send email: SENDGRID_API_KEY not set', 'email-service');
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    log('Cannot send email: SMTP credentials not set', 'email-service');
     return false;
   }
 
   try {
-    // Default from address if not provided
-    const from = params.from || 'noreply@vaultbox.app';
+    const transporter = createTransporter();
     
-    await mailService.send({
-      to: params.to,
+    // Default from address if not provided
+    const from = params.from || process.env.SMTP_FROM || 'noreply@vaultbox.app';
+    
+    await transporter.sendMail({
       from: from,
+      to: params.to,
       subject: params.subject,
       text: params.text,
       html: params.html,
