@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { TrustedContact } from "@/lib/types";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +41,7 @@ export default function TrustedContactPage() {
     data: trustedContact, 
     isLoading: isLoadingContact, 
     error: contactError 
-  } = useQuery({
+  } = useQuery<TrustedContact[]>({
     queryKey: ['/api/trusted-contacts'],
     enabled: !!user,
   });
