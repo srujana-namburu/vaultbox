@@ -21,6 +21,7 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { NotificationProvider } from "@/hooks/use-notifications";
 import { ActivityLogProvider } from "@/hooks/use-activity-log";
+import TrustedUserPage from "@/pages/trusted-user-page"; // Assuming this import is needed
 
 function Router() {
   return (
@@ -38,6 +39,7 @@ function Router() {
       <ProtectedRoute path="/activity" component={ActivityPage} />
       <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/about" component={AboutPage} />
+      <Route path="/trusted-user" component={TrustedUserPage} /> {/* Added route */}
       <Route component={NotFound} />
     </Switch>
   );

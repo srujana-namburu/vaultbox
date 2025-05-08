@@ -9,7 +9,8 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
-  Bell
+  Bell,
+  Shield
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -64,11 +65,11 @@ export function Sidebar() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [timer, logoutMutation, navigate]);
-  
+
   const handleLogout = () => {
     logoutMutation.mutate();
   };
-  
+
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -76,14 +77,15 @@ export function Sidebar() {
       .join('')
       .toUpperCase();
   };
-  
+
   const navItems = [
     { icon: <Home size={20} />, label: "Dashboard", path: "/" },
     { icon: <FolderLock size={20} />, label: "My Vault", path: "/vault" },
     { icon: <UserCheck size={20} />, label: "Trusted Contacts", path: "/trusted-contacts" },
     { icon: <Clock size={20} />, label: "Activity Log", path: "/activity" },
     { icon: <Settings size={20} />, label: "Settings", path: "/settings" },
-    { icon: <ShieldCheck size={20} />, label: "About", path: "/about" }
+    { icon: <ShieldCheck size={20} />, label: "About", path: "/about" },
+    { icon: <Shield size={20} />, label: "Trusted User", path: "/trusted-user" }
   ];
 
   // Remove formatTime and use SlidingNumber for timer display
