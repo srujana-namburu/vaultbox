@@ -1,0 +1,117 @@
+Create the Vault Timeline View component for VaultBox, a central feature of the application that displays all user-stored encrypted entries in a chronological timeline format. This view provides users with a comprehensive overview of their vault contents with clear status indicators, expiration warnings, and encrypted previews, allowing for easy management and interaction with their sensitive information.
+Design Principles
+
+Security-focused dark interface with vault-like aesthetics
+Clean, organized timeline presentation for optimal information scanning
+Strong visual status indicators that communicate entry states at a glance
+Intuitive interaction patterns for viewing, editing, and deleting entries
+Responsive design adapting seamlessly from mobile to desktop
+
+Frontend Components to Implement
+1. Main Timeline Interface
+
+Create a scrollable, filterable timeline of all vault entries
+Each entry should be displayed as a card with:
+
+Title prominently displayed
+Category indicator with appropriate icon (Finance, Health, Personal, Notes)
+Creation/modification date
+Prominent status badge (color-coded):
+
+Active (green) - Normal, accessible entry
+Locked (blue) - Extra security measures applied
+Shared (orange) - Designated for trusted contact access
+Expiring Soon (red) - Approaching auto-deletion date
+
+
+Masked content preview (e.g., "████████████" or partially visible first line)
+Clear interaction buttons (View, Edit, Delete)
+
+
+Implement smooth animations for expanding/collapsing entry details
+
+2. Timeline Filtering & Search
+
+Category filter buttons/dropdown to show only entries of a specific type
+Status filter to view entries by their current state
+Search box to quickly locate entries by title or content
+Date range selector to view entries created within a specific timeframe
+Sort options (newest first, oldest first, alphabetical, expiring soonest)
+
+3. Entry Detail Expansion
+
+Clicking an entry expands it to show:
+
+Full encrypted content (still masked until explicitly revealed)
+Detailed metadata (creation date, last modified, auto-delete date if set)
+Advanced options (change category, modify auto-delete settings)
+Trusted contact sharing settings
+"Reveal Content" button with appropriate security confirmation
+
+
+
+4. Status & Warning Systems
+
+Visual countdown timers for entries approaching auto-deletion
+Pulsing animation for entries with active alerts/warnings
+Modal confirmations for critical actions (delete, change visibility)
+Tooltip explanations for each status type
+Warning banner for entries accessible to trusted contacts
+
+5. Entry Management Actions
+
+Intuitive edit mode with save/cancel options
+Secure delete process with confirmation
+Option to extend/modify auto-delete timeframes
+Toggle controls for trusted contact visibility
+"Create Similar" option to duplicate entry structure
+
+Database Requirements
+
+Store entry metadata separately from encrypted content
+Track status changes and modification history
+Store expiration/auto-delete timestamps
+Maintain relationship between entries and trusted contact access permissions
+
+API Endpoints Needed
+
+GET /api/vault/entries - Retrieve all entries for timeline view
+GET /api/vault/entries/ - Get specific entry details
+PUT /api/vault/entries/ - Update entry content or settings
+DELETE /api/vault/entries/ - Remove an entry
+PATCH /api/vault/entries//status - Update just the entry status
+
+Interaction Patterns
+
+Timeline Browsing Flow:
+
+User scrolls through chronological list of entries
+Can quickly scan status indicators and titles
+Filter and search to locate specific entries
+
+
+Entry Management Flow:
+
+Tap/click entry to expand details
+Secondary click on reveal button to see actual content
+Edit option opens inline form or modal
+Delete triggers confirmation dialog emphasizing permanent action
+
+
+Status Management Flow:
+
+Clear visual indicators when an entry is approaching expiration
+One-click extension of auto-delete timeframes
+Toggle controls for changing entry status (e.g., marking as shared for emergency access)
+
+
+
+Visual Design Elements
+
+Implement a time-axis visualization (vertical or horizontal)
+Use subtle connecting elements between timeline entries
+Include vault-themed iconography for different entry types and statuses
+Apply consistent color-coding for status indicators
+Create microinteractions that reinforce security (unlocking animations, secure deletion effects)
+
+Ensure the interface balances information density with clarity, providing users a complete overview of their vault contents while emphasizing the secure nature of the application through appropriate visual cues and confirmation patterns.RetryClaude can make mistakes. Please double-check responses.

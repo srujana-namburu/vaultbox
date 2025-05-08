@@ -66,10 +66,10 @@ export default function TrustedContactPage() {
       form.reset({
         name: contact.name,
         email: contact.email,
-        relationship: contact.relationship,
-        inactivityPeriod: contact.inactivityPeriod,
-        personalMessage: contact.personalMessage || "",
-        waitingPeriod: contact.waitingPeriod
+        relationship: contact.relationshipType,
+        inactivityPeriod: contact.inactivityPeriodDays,
+        personalMessage: "",
+        waitingPeriod: "48 hours" // Default 48 hours
       });
     }
   }, [trustedContact, form]);
@@ -184,7 +184,7 @@ export default function TrustedContactPage() {
     }
     
     const daysSinceReset = calculateDaysSinceReset();
-    const inactivityPeriod = trustedContact[0].inactivityPeriod;
+    const inactivityPeriod = trustedContact[0].inactivityPeriodDays;
     
     return Math.min(100, Math.round((daysSinceReset / inactivityPeriod) * 100));
   };
@@ -390,12 +390,12 @@ export default function TrustedContactPage() {
                         <div className="flex items-center justify-between">
                           <div className="font-medium">Inactivity Timer</div>
                           <div className="text-sm text-muted-foreground">
-                            {daysSinceReset} of {trustedContact[0].inactivityPeriod} days
+                            {daysSinceReset} of {trustedContact[0].inactivityPeriodDays} days
                           </div>
                         </div>
                         <Progress value={progressPercentage} className="h-2" />
                         <p className="text-sm text-muted-foreground">
-                          {trustedContact[0].inactivityPeriod - daysSinceReset} days remaining before emergency access can be requested
+                          {trustedContact[0].inactivityPeriodDays - daysSinceReset} days remaining before emergency access can be requested
                         </p>
                       </div>
                       
@@ -434,7 +434,7 @@ export default function TrustedContactPage() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Clock className="h-5 w-5 text-muted-foreground" />
-                          <span>{trustedContact[0].waitingPeriod}</span>
+                          <span>48 hours</span>
                         </div>
                         <Button
                           variant="outline"
