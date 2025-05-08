@@ -203,7 +203,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trusted-contacts", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
-      const contactData = insertTrustedContactSchema.parse({ ...req.body, userId });
+      
+      // Check if user already has a trusted contact
+      const existingContacts = await storage.getTrustedContacts(userId);
+      if (existingContacts.length > 0) {
+        return res.status(400).json({ 
+          message: "You already have a trusted contact. Only one trusted contact is allowed per account." 
+        });
+      }
+      
+      const contactData = insertTrustedContactSchema.parse({ 
+        ...req.body, 
+        userId,
+        status: 'pending',
+        accessLevel: req.body.accessLevel || 'emergency_only',
+        lastInactivityResetDate: new Date()
+      });
       
       const newContact = await storage.createTrustedContact(contactData);
       
@@ -212,6 +227,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId,
         action: "contact_added",
         details: `Added "${newContact.name}" as trusted contact`
+      });
+      
+      // Create notification for the user
+      await storage.createNotification({
+        userId,
+        title: "Trusted Contact Added",
+        message: `${newContact.name} has been added as your trusted contact. They will receive an invitation email shortly.`,
+        type: "contact_added",
+        priority: "medium"
       });
       
       res.status(201).json(newContact);

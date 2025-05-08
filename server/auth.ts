@@ -317,8 +317,23 @@ export function setupAuth(app: Express) {
           deviceInfo: req.headers['user-agent']
         });
         
-        // Update last login time
+        // Update last login time and reset inactivity timer
         await storage.updateUserLastLogin(user.id);
+        
+        // Reset inactivity timer for trusted contacts
+        const trustedContact = await storage.getTrustedContactByUserId(user.id);
+        if (trustedContact) {
+          await storage.updateTrustedContactInactivityReset(trustedContact.id);
+          
+          // Log the inactivity reset
+          await storage.createActivityLog({
+            userId: user.id,
+            action: "inactivity_threshold_reset",
+            details: `Inactivity timer reset for trusted contact ${trustedContact.name}`,
+            ipAddress: req.ip,
+            deviceInfo: req.headers['user-agent']
+          });
+        }
         
         // Check if this is a new device and register it
         const existingDevice = await storage.getUserDeviceByDeviceId(

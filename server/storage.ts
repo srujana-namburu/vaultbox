@@ -371,6 +371,26 @@ export class DatabaseStorage implements IStorage {
     return contact;
   }
   
+  async getTrustedContactByUserId(userId: number): Promise<TrustedContact | undefined> {
+    const [contact] = await db
+      .select()
+      .from(trustedContacts)
+      .where(eq(trustedContacts.userId, userId));
+    return contact;
+  }
+  
+  async updateTrustedContactInactivityReset(id: number): Promise<TrustedContact | undefined> {
+    const [updatedContact] = await db
+      .update(trustedContacts)
+      .set({ 
+        lastInactivityResetDate: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(trustedContacts.id, id))
+      .returning();
+    return updatedContact;
+  }
+  
   async createTrustedContact(contact: InsertTrustedContact): Promise<TrustedContact> {
     const now = new Date();
     const [newContact] = await db
