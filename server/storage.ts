@@ -8,7 +8,8 @@ import {
   accessRequests,
   attachments,
   entryVersions,
-  userDevices
+  userDevices,
+  notificationPreferences
 } from "@shared/schema";
 
 import type { 
@@ -18,6 +19,8 @@ import type {
   InsertVaultEntry, 
   TrustedContact, 
   InsertTrustedContact, 
+  NotificationPreference,
+  InsertNotificationPreferences,
   SharedEntry, 
   InsertSharedEntry, 
   ActivityLog, 
@@ -34,7 +37,7 @@ import type {
   InsertUserDevice
 } from "@shared/schema";
 
-import { eq, desc, and, asc, or, sql } from "drizzle-orm";
+import { eq, desc, and, asc, or, sql, isNotNull } from "drizzle-orm";
 import { db } from "./db";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -118,6 +121,12 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<Notification | undefined>;
   markAllNotificationsAsRead(userId: number): Promise<void>;
   deleteNotification(id: number): Promise<boolean>;
+  deleteExpiredNotifications(): Promise<number>;
+  
+  // Notification preferences operations
+  getNotificationPreferences(userId: number): Promise<NotificationPreference | undefined>;
+  createNotificationPreferences(preferences: InsertNotificationPreferences): Promise<NotificationPreference>;
+  updateNotificationPreferences(userId: number, preferences: Partial<NotificationPreference>): Promise<NotificationPreference | undefined>;
   
   // Activity log operations
   getActivityLogs(userId: number, limit?: number): Promise<ActivityLog[]>;
@@ -629,6 +638,52 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: number): Promise<boolean> {
     await db.delete(notifications).where(eq(notifications.id, id));
     return true;
+  }
+  
+  async deleteExpiredNotifications(): Promise<number> {
+    const now = new Date();
+    const result = await db
+      .delete(notifications)
+      .where(
+        and(
+          isNotNull(notifications.expiresAt),
+          sql`${notifications.expiresAt} < ${now}`
+        )
+      )
+      .returning();
+    return result.length;
+  }
+  
+  // Notification preferences operations
+  async getNotificationPreferences(userId: number): Promise<NotificationPreference | undefined> {
+    const [preferences] = await db
+      .select()
+      .from(notificationPreferences)
+      .where(eq(notificationPreferences.userId, userId));
+    return preferences;
+  }
+  
+  async createNotificationPreferences(preferences: InsertNotificationPreferences): Promise<NotificationPreference> {
+    const [newPreferences] = await db
+      .insert(notificationPreferences)
+      .values({
+        ...preferences,
+        updatedAt: new Date()
+      })
+      .returning();
+    return newPreferences;
+  }
+  
+  async updateNotificationPreferences(userId: number, preferences: Partial<NotificationPreference>): Promise<NotificationPreference | undefined> {
+    const [updatedPreferences] = await db
+      .update(notificationPreferences)
+      .set({
+        ...preferences,
+        updatedAt: new Date()
+      })
+      .where(eq(notificationPreferences.userId, userId))
+      .returning();
+    return updatedPreferences;
   }
   
   // Activity log operations

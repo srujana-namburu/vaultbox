@@ -84,5 +84,54 @@ export interface Notification {
   type: string;
   isRead: boolean;
   priority: 'critical' | 'high' | 'medium' | 'low';
+  metadata?: Record<string, any>;
+  actionUrl?: string;
+  expiresAt?: string;
   createdAt: string;
+}
+
+export interface NotificationPreference {
+  id: number;
+  userId: number;
+  emailEnabled: boolean;
+  pushEnabled: boolean;
+  inAppEnabled: boolean;
+  emailFrequency: string; // immediate, daily, weekly
+  securityAlertsEnabled: boolean;
+  activityAlertsEnabled: boolean;
+  updatesEnabled: boolean;
+  emailVerified: boolean;
+  unsubscribeToken?: string;
+  updatedAt: string;
+}
+
+// WebSocket message definitions
+
+// Base WebSocket Message type
+export interface WebSocketMessage {
+  type: 'notification' | 'ping' | 'pong' | 'system';
+  timestamp?: number;
+  message?: string;
+  data?: any;
+}
+
+// Specific WebSocket Message types
+export interface WebSocketNotificationMessage extends WebSocketMessage {
+  type: 'notification';
+  data: Notification;
+}
+
+export interface WebSocketPingMessage extends WebSocketMessage {
+  type: 'ping';
+  timestamp: number;
+}
+
+export interface WebSocketPongMessage extends WebSocketMessage {
+  type: 'pong';
+  timestamp: number;
+}
+
+export interface WebSocketSystemMessage extends WebSocketMessage {
+  type: 'system';
+  message: string;
 }

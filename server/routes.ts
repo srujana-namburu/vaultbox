@@ -10,12 +10,15 @@ import {
   insertAccessRequestSchema,
   insertNotificationSchema,
   insertUserDeviceSchema,
+  insertNotificationPreferencesSchema,
   trustedContacts,
   accessRequests
 } from "@shared/schema";
 import { eq, asc, and, desc, sql, isNotNull } from "drizzle-orm";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { webSocketService } from "./services/websocket";
+import { notificationService } from "./services/notification";
 
 // Middleware to check if user is authenticated
 const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
@@ -962,6 +965,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to mark all notifications as read" });
     }
   });
+  
+  // Notification preferences routes
+  app.get("/api/notification-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await storage.getNotificationPreferences(userId);
+      
+      if (!preferences) {
+        // Create default preferences if none exist
+        const defaultPreferences = await storage.createNotificationPreferences({
+          userId,
+          emailEnabled: true,
+          pushEnabled: true,
+          inAppEnabled: true,
+          emailFrequency: 'immediate',
+          securityAlertsEnabled: true,
+          activityAlertsEnabled: true,
+          updatesEnabled: true,
+          emailVerified: false
+        });
+        return res.json(defaultPreferences);
+      }
+      
+      res.json(preferences);
+    } catch (err) {
+      console.error("Notification preferences error:", err);
+      res.status(500).json({ message: "Failed to fetch notification preferences" });
+    }
+  });
+  
+  app.put("/api/notification-preferences", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const preferences = await storage.getNotificationPreferences(userId);
+      
+      if (!preferences) {
+        // Create preferences if they don't exist
+        const newPreferences = await storage.createNotificationPreferences({
+          ...req.body,
+          userId
+        });
+        return res.status(201).json(newPreferences);
+      }
+      
+      // Update existing preferences
+      const updatedPreferences = await storage.updateNotificationPreferences(userId, req.body);
+      
+      // Log activity
+      await storage.createActivityLog({
+        userId,
+        action: "security_settings_changed",
+        details: "Updated notification preferences",
+        metadata: { 
+          emailEnabled: updatedPreferences?.emailEnabled,
+          pushEnabled: updatedPreferences?.pushEnabled,
+          inAppEnabled: updatedPreferences?.inAppEnabled,
+          emailFrequency: updatedPreferences?.emailFrequency
+        }
+      });
+      
+      res.json(updatedPreferences);
+    } catch (err) {
+      console.error("Notification preferences update error:", err);
+      res.status(500).json({ message: "Failed to update notification preferences" });
+    }
+  });
 
   // User devices routes
   app.get("/api/user-devices", isAuthenticated, async (req, res) => {
@@ -1184,5 +1253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   const httpServer = createServer(app);
+  
+  // Initialize WebSocket service
+  webSocketService.initialize(httpServer);
+  
+  // Clean up expired notifications daily
+  if (process.env.NODE_ENV === 'production') {
+    setInterval(async () => {
+      await notificationService.deleteExpiredNotifications();
+    }, 86400000); // 24 hours
+  }
+  
   return httpServer;
 }
