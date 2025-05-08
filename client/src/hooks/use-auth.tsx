@@ -19,6 +19,7 @@ type AuthContextType = {
   registerMutation: UseMutationResult<SelectUser, Error, RegisterData>;
   verifyTwoFactorMutation: UseMutationResult<SelectUser, Error, TwoFactorData>;
   setupTwoFactorMutation: UseMutationResult<TwoFactorSetupResult, Error, void>;
+  verifyTwoFactorSetupMutation: UseMutationResult<SelectUser, Error, { secret: string; token: string; recoveryKeys: string[] }>;
   securityScoreMutation: UseMutationResult<SelectUser, Error, { score: number }>;
   requires2FA: boolean;
   userId2FA: number | null;
@@ -165,6 +166,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+  
+  // Mutation to verify and complete the 2FA setup
+  const verifyTwoFactorSetupMutation = useMutation({
+    mutationFn: async (data: { secret: string; token: string; recoveryKeys: string[] }) => {
+      const res = await apiRequest("POST", "/api/verify-2fa-setup", data);
+      return await res.json();
+    },
+    onSuccess: (data: SelectUser) => {
+      queryClient.setQueryData(["/api/user"], data);
+      setTwoFactorSetupData(null);
+      toast({
+        title: "2FA enabled",
+        description: "Two-factor authentication has been successfully enabled for your account.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Verification failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const securityScoreMutation = useMutation({
     mutationFn: async (data: { score: number }) => {
@@ -276,6 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerMutation,
     verifyTwoFactorMutation,
     setupTwoFactorMutation,
+    verifyTwoFactorSetupMutation,
     securityScoreMutation,
     requires2FA,
     userId2FA,

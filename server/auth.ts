@@ -435,14 +435,57 @@ export function setupAuth(app: Express) {
       // Generate recovery keys
       const recoveryKeys = generateRecoveryKeys();
       
-      // Save secret and recovery keys
+      // Just return the setup data, don't save yet until user confirms with a valid token
+      // We'll save this in the verify-2fa-setup endpoint
+      
+      // Log activity of 2FA setup initiation
+      await storage.createActivityLog({
+        userId: user.id,
+        action: "security_settings_changed",
+        details: "Two-factor authentication setup initiated",
+        ipAddress: req.ip,
+        deviceInfo: req.headers['user-agent']
+      });
+      
+      res.status(200).json({
+        secret: secret.base32,
+        qrCode: qrCodeUrl,
+        recoveryKeys,
+        message: "Two-factor authentication setup initiated"
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+  
+  // Verify and complete 2FA setup
+  app.post("/api/verify-2fa-setup", async (req, res, next) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+      
+      const user = req.user as SelectUser;
+      const { secret, token, recoveryKeys } = req.body;
+      
+      if (!secret || !token || !recoveryKeys) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Verify token against the provided secret
+      if (!verify2FA(secret, token)) {
+        return res.status(401).json({ error: "Invalid verification code" });
+      }
+      
+      // Save 2FA configuration
       await storage.updateUser(user.id, {
-        twoFactorSecret: secret.base32,
+        twoFactorEnabled: true,
+        twoFactorSecret: secret,
         recoveryKeys,
         securityScore: Math.min(100, (user.securityScore || 50) + 20) // Increase security score
       });
       
-      // Log activity
+      // Log successful 2FA setup
       await storage.createActivityLog({
         userId: user.id,
         action: "security_settings_changed",
@@ -451,10 +494,22 @@ export function setupAuth(app: Express) {
         deviceInfo: req.headers['user-agent']
       });
       
+      // Create notification
+      await storage.createNotification({
+        userId: user.id,
+        title: "Two-Factor Authentication Enabled",
+        message: "Your account is now protected with two-factor authentication, providing an extra layer of security.",
+        type: "security_alert",
+        priority: "medium"
+      });
+      
+      // Return updated user
+      const updatedUser = await storage.getUser(user.id);
+      const { password, twoFactorSecret, ...safeUser } = updatedUser!;
+      
       res.status(200).json({
-        qrCode: qrCodeUrl,
-        recoveryKeys,
-        message: "Two-factor authentication enabled"
+        ...safeUser,
+        message: "Two-factor authentication enabled successfully"
       });
     } catch (err) {
       next(err);
