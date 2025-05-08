@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FolderLock, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { FolderLock, Eye, EyeOff, Mail, Lock, User, Shield, AlertCircle, KeyRound } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -8,14 +8,33 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
 export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
+  const [twoFactorToken, setTwoFactorToken] = useState("");
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
-  const [registerForm, setRegisterForm] = useState({ username: "", password: "", fullName: "" });
+  const [registerForm, setRegisterForm] = useState({ 
+    username: "", 
+    email: "", 
+    password: "", 
+    fullName: "",
+    twoFactorEnabled: false
+  });
+  const [passwordStrength, setPasswordStrength] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
   const [formTab, setFormTab] = useState("login");
-  const { user, loginMutation, registerMutation } = useAuth();
+  
+  const { 
+    user, 
+    loginMutation, 
+    registerMutation, 
+    verifyTwoFactorMutation,
+    requires2FA,
+    userId2FA,
+    calculatePasswordStrength
+  } = useAuth();
+  
   const [, navigate] = useLocation();
   
   // If user is already logged in, redirect to home
@@ -25,6 +44,15 @@ export default function AuthPage() {
     }
   }, [user, navigate]);
   
+  // Update password strength when password changes
+  useEffect(() => {
+    if (registerForm.password) {
+      setPasswordStrength(calculatePasswordStrength(registerForm.password));
+    } else {
+      setPasswordStrength(0);
+    }
+  }, [registerForm.password, calculatePasswordStrength]);
+  
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loginMutation.mutate(loginForm);
@@ -32,7 +60,29 @@ export default function AuthPage() {
   
   const handleRegisterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    registerMutation.mutate(registerForm);
+    // Make sure email is set to username if using email as username
+    const formData = {
+      ...registerForm,
+      email: registerForm.email || registerForm.username
+    };
+    registerMutation.mutate(formData);
+  };
+  
+  const handleTwoFactorSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (userId2FA) {
+      verifyTwoFactorMutation.mutate({
+        userId: userId2FA,
+        twoFactorToken
+      });
+    }
+  };
+  
+  // Helper function for password strength color
+  const getPasswordStrengthColor = () => {
+    if (passwordStrength < 30) return "bg-red-500";
+    if (passwordStrength < 60) return "bg-yellow-500";
+    return "bg-green-500";
   };
   
   return (
@@ -58,75 +108,115 @@ export default function AuthPage() {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="your@email.com"
-                          className="pl-10 bg-[#1E293B]/50 border-primary"
-                          value={loginForm.username}
-                          onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
-                          required
-                        />
+                  {requires2FA ? (
+                    <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+                      <div className="mb-4 p-4 bg-secondary/10 rounded-lg border border-secondary/20 text-center">
+                        <Shield className="h-12 w-12 text-secondary mx-auto mb-2" />
+                        <h3 className="text-lg font-semibold text-white mb-1">Two-Factor Authentication</h3>
+                        <p className="text-[#E5E5E5] text-sm">
+                          Please enter the 6-digit code from your authenticator app to complete the login process.
+                        </p>
                       </div>
-                    </div>
                     
-                    <div className="space-y-2">
-                      <Label htmlFor="password">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                        <Input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="pl-10 pr-10 bg-[#1E293B]/50 border-primary"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-[#E5E5E5] hover:text-secondary"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <div className="space-y-2">
+                        <Label htmlFor="twoFactorToken">Authentication Code</Label>
+                        <div className="relative">
+                          <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="twoFactorToken"
+                            type="text"
+                            placeholder="123456"
+                            className="pl-10 bg-[#1E293B]/50 border-primary text-center font-mono text-lg tracking-widest"
+                            value={twoFactorToken}
+                            onChange={(e) => setTwoFactorToken(e.target.value)}
+                            maxLength={6}
+                            pattern="[0-9]*"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
+                        disabled={verifyTwoFactorMutation.isPending || twoFactorToken.length !== 6}
+                      >
+                        {verifyTwoFactorMutation.isPending ? "Verifying..." : "Verify Code"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <form onSubmit={handleLoginSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="email"
+                            type="email"
+                            placeholder="your@email.com"
+                            className="pl-10 bg-[#1E293B]/50 border-primary"
+                            value={loginForm.username}
+                            onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="password">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="pl-10 pr-10 bg-[#1E293B]/50 border-primary"
+                            value={loginForm.password}
+                            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-[#E5E5E5] hover:text-secondary"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id="remember"
+                            checked={rememberMe}
+                            onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                          />
+                          <Label
+                            htmlFor="remember"
+                            className="text-sm font-normal text-[#E5E5E5]"
+                          >
+                            Remember this device
+                          </Label>
+                        </div>
+                        <Button variant="link" className="text-secondary p-0 h-auto">
+                          Forgot password?
                         </Button>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                          id="remember"
-                          checked={rememberMe}
-                          onCheckedChange={(checked) => setRememberMe(checked as boolean)}
-                        />
-                        <Label
-                          htmlFor="remember"
-                          className="text-sm font-normal text-[#E5E5E5]"
-                        >
-                          Remember this device
-                        </Label>
-                      </div>
-                      <Button variant="link" className="text-secondary p-0 h-auto">
-                        Forgot password?
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
+                        disabled={loginMutation.isPending}
+                      >
+                        {loginMutation.isPending ? "Signing in..." : "Sign In"}
                       </Button>
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
-                      disabled={loginMutation.isPending}
-                    >
-                      {loginMutation.isPending ? "Signing in..." : "Sign In"}
-                    </Button>
-                  </form>
+                    </form>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="register">
@@ -186,6 +276,69 @@ export default function AuthPage() {
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
+                      {registerForm.password && (
+                        <div className="space-y-1 mt-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs">Password Strength</Label>
+                            <span className="text-xs">
+                              {passwordStrength < 30 && "Weak"}
+                              {passwordStrength >= 30 && passwordStrength < 60 && "Moderate"}
+                              {passwordStrength >= 60 && passwordStrength < 80 && "Strong"}
+                              {passwordStrength >= 80 && "Very Strong"}
+                            </span>
+                          </div>
+                          <Progress value={passwordStrength} className="h-1" 
+                            indicator={`${getPasswordStrengthColor()} transition-all duration-500`} />
+                          <ul className="text-xs space-y-1 mt-2 text-[#E5E5E5]/80">
+                            <li className={`flex items-center ${/[A-Z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                {/[A-Z]/.test(registerForm.password) && "✓"}
+                              </div>
+                              Uppercase letter
+                            </li>
+                            <li className={`flex items-center ${/[a-z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                {/[a-z]/.test(registerForm.password) && "✓"}
+                              </div>
+                              Lowercase letter
+                            </li>
+                            <li className={`flex items-center ${/[0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                {/[0-9]/.test(registerForm.password) && "✓"}
+                              </div>
+                              Number
+                            </li>
+                            <li className={`flex items-center ${/[^A-Za-z0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                {/[^A-Za-z0-9]/.test(registerForm.password) && "✓"}
+                              </div>
+                              Special character
+                            </li>
+                            <li className={`flex items-center ${registerForm.password.length >= 8 ? 'text-green-400' : ''}`}>
+                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                {registerForm.password.length >= 8 && "✓"}
+                              </div>
+                              At least 8 characters
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="enableTwoFactor"
+                        checked={registerForm.twoFactorEnabled}
+                        onCheckedChange={(checked) => 
+                          setRegisterForm({ ...registerForm, twoFactorEnabled: Boolean(checked) })
+                        }
+                      />
+                      <Label
+                        htmlFor="enableTwoFactor"
+                        className="text-sm font-normal text-[#E5E5E5]"
+                      >
+                        Enable two-factor authentication
+                      </Label>
                     </div>
                     
                     <div className="space-y-2">
