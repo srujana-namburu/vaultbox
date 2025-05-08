@@ -8,6 +8,7 @@ export const userStatusEnum = pgEnum('user_status', ['active', 'locked', 'suspen
 export const vaultEntryStatusEnum = pgEnum('vault_entry_status', ['active', 'locked', 'shared', 'expiring']);
 export const contactStatusEnum = pgEnum('contact_status', ['pending', 'active', 'declined', 'revoked']);
 export const accessLevelEnum = pgEnum('access_level', ['emergency_only', 'full_access', 'limited_access', 'temporary_access']);
+export const relationshipTypeEnum = pgEnum('relationship_type', ['family', 'friend', 'legal', 'medical', 'other']);
 export const categoryEnum = pgEnum('category', [
   'personal_documents', 
   'financial_records', 
@@ -23,6 +24,11 @@ export const activityTypeEnum = pgEnum('activity_type', [
   'contact_added',
   'contact_updated', 
   'contact_deleted',
+  'contact_invite_sent',
+  'contact_invite_accepted',
+  'contact_access_granted',
+  'contact_access_revoked',
+  'inactivity_threshold_reset',
   'login',
   'logout',
   'account_created',
@@ -155,12 +161,17 @@ export const trustedContacts = pgTable("trusted_contacts", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
+  relationship: relationshipTypeEnum("relationship").default('other'),
   status: contactStatusEnum("status").default('pending'),
   accessLevel: accessLevelEnum("access_level").notNull(),
+  inactivityPeriod: integer("inactivity_period").default(30), // Days until inactivity triggers access
+  personalMessage: text("personal_message"),
+  lastInactivityResetDate: timestamp("last_inactivity_reset_date").defaultNow(),
   waitingPeriod: text("waiting_period").default("24 hours"),
   notificationPreferences: jsonb("notification_preferences").default({}),
   verificationCode: text("verification_code"),
   verifiedAt: timestamp("verified_at"),
+  invitationSentAt: timestamp("invitation_sent_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -290,8 +301,11 @@ export const insertTrustedContactSchema = createInsertSchema(trustedContacts).pi
   name: true,
   email: true,
   phone: true,
+  relationship: true,
   status: true,
   accessLevel: true,
+  inactivityPeriod: true,
+  personalMessage: true,
   waitingPeriod: true,
   notificationPreferences: true
 });

@@ -1,0 +1,166 @@
+# VaultBox Trusted Contact Setup Implementation Prompt
+
+## Overview
+Implement a Trusted Contact system within the existing VaultBox application on Replit. This feature enables users to designate a single trusted individual who can access specific vault entries under predetermined conditions, such as user inactivity for a defined period or explicit record sharing.
+
+## Feature Requirements
+
+### Core Functionality
+- Each user can assign exactly one trusted contact via email
+- Trusted contacts cannot access any vault entries by default
+- Access is granted only under specific conditions:
+  1. User has been inactive for a configurable period (X days)
+  2. User explicitly shares specific records with the trusted contact
+- User inactivity timer must reset on every successful login
+- System should prevent multiple trusted contacts per user
+
+### Frontend Components
+
+1. **Trusted Contact Management Page**
+   - Form to add a trusted contact with fields:
+     - Email address (required)
+     - Name (optional)
+     - Relationship (optional dropdown: Family, Friend, Legal, Medical, Other)
+     - Inactivity period selector (e.g., 30, 60, 90 days)
+     - Optional personal message to trusted contact
+   - Current trusted contact display panel showing:
+     - Contact details
+     - Current inactivity settings
+     - Last inactivity reset date
+     - Option to remove or change trusted contact
+   - Visual indicator of current inactivity status/timer
+
+2. **Trusted Contact Invitation Flow**
+   - Email invitation composition interface
+   - Preview of what invitation will look like
+   - Ability to customize invitation message
+   - Confirmation before sending invitation
+   - Status tracking of pending invitations
+
+3. **Entry Sharing Interface**
+   - Add option in vault entry detail view to explicitly share with trusted contact
+   - Toggle for "Share with trusted contact if inactive" on entry creation/edit forms
+   - Batch selection feature to share multiple entries at once
+   - Visual indicators on entries that are shared or will be shared upon inactivity
+
+4. **Trusted Contact Dashboard**
+   - View showing all trusted contact relationships where user is the trusted party
+   - Status indicators for each trust relationship
+   - Access request interface for inactive user vaults
+   - List view of explicitly shared entries
+
+### Backend Requirements
+
+1. **Data Models**
+   - TrustedContact relationship model capturing:
+     - User reference (vault owner)
+     - Contact email
+     - Contact details (name, relationship)
+     - Inactivity threshold period
+     - Invitation status
+     - Creation timestamp
+   - User model extensions:
+     - Last activity timestamp
+     - Inactivity notification settings
+     - Trusted contact reference
+
+2. **Inactivity Tracking System**
+   - Update user's last activity timestamp on:
+     - Every successful login
+     - Key vault interactions (creating/updating entries)
+   - Background job to check user inactivity status daily
+   - Configurable inactivity thresholds (30, 60, 90 days recommended defaults)
+
+3. **API Endpoints**
+   - `POST /api/trusted-contact` - Create/update trusted contact
+   - `DELETE /api/trusted-contact` - Remove trusted contact
+   - `GET /api/trusted-contact` - Get current trusted contact details
+   - `PUT /api/trusted-contact/share/:entryId` - Explicitly share an entry
+   - `PUT /api/trusted-contact/unshare/:entryId` - Remove explicit sharing
+   - `GET /api/trusted-relationships` - Get relationships where user is trusted contact
+   - `POST /api/trusted-relationships/:userId/request-access` - Request access to inactive vault
+
+4. **Notification System**
+   - Email notifications for:
+     - Trusted contact invitation
+     - Acceptance of trusted contact role
+     - Warning of approaching inactivity threshold (7 days before)
+     - Alert when trusted contact requests access
+     - Confirmation when access is granted due to inactivity
+
+5. **Security Measures**
+   - Verification process for trusted contact setup
+   - Email confirmation required for trusted contact
+   - Additional authentication for critical changes
+   - Audit logging of all trusted contact actions
+   - Ability to instantly revoke access
+
+### Database Requirements
+
+Implement storage for trusted contact relationships with fields to capture:
+- Primary user (vault owner) reference
+- Trusted contact email and optional details
+- Relationship status (pending, active, revoked)
+- Inactivity threshold configuration
+- Timestamps for creation and updates
+- List of explicitly shared entry IDs
+
+## UI/UX Considerations
+
+1. **Trust Relationship Visualization**
+   - Clear visual distinction between:
+     - No trusted contact set
+     - Pending invitation
+     - Active trusted contact
+   - Progress bar or countdown for inactivity period
+   - Color-coded status indicators (green: active, yellow: approaching inactivity, red: inactive)
+
+2. **Trust Establishment Flow**
+   - Step-by-step guided process for first-time setup
+   - Clear explanation of trusted contact responsibilities
+   - Preview of what trusted contact will see
+   - Explicit confirmation steps with security warnings
+
+3. **Entry Sharing Controls**
+   - Intuitive toggle for "share if inactive" option
+   - Batch selection interface for multiple entries
+   - Clear differentiation between always-shared and inactive-shared entries
+   - Confirmation dialogs for sharing actions
+
+4. **User Inactivity Awareness**
+   - Dashboard widget showing days since last activity
+   - Notifications about approaching inactivity thresholds
+   - One-click login option from notification emails to reset timer
+   - Activity log showing recent login history
+
+## Implementation Approach
+
+1. Design and implement the trusted contact data model
+2. Create the trusted contact management interface
+3. Implement the inactivity tracking system
+4. Develop the invitation and verification flow
+5. Build the entry sharing interface and controls
+6. Create the trusted contact dashboard for accessing shared entries
+7. Implement all notification systems
+8. Add comprehensive logging and audit trails
+
+## Security Best Practices
+
+- Require email verification for trusted contact setup
+- Implement additional authentication for trusted contact changes
+- Create comprehensive audit trails for all trusted contact actions
+- Send notifications to primary email for all critical changes
+- Provide emergency revocation capabilities
+- Implement rate limiting for access requests
+- Consider requiring periodic reconfirmation of trusted contact relationship
+
+## Testing Requirements
+
+- Verify inactivity timer resets correctly on login
+- Test explicit sharing functionality works as expected
+- Confirm trusted contact receives appropriate notifications
+- Validate inactivity thresholds trigger properly
+- Test the emergency access request flow
+- Ensure only one trusted contact can be assigned
+- Verify trusted contact can only access designated entries
+- Test revocation immediately removes all access
