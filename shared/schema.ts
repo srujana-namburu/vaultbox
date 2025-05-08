@@ -281,7 +281,8 @@ export const insertVaultEntrySchema = createInsertSchema(vaultEntries).pick({
   tags: true,
   status: true,
   allowEmergencyAccess: true,
-  autoDeleteAt: true
+  autoDeleteAt: true,
+  metadata: true
 });
 
 export const insertTrustedContactSchema = createInsertSchema(trustedContacts).pick({

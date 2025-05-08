@@ -63,7 +63,7 @@ export default function NewEntry() {
 
   // Form state
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string>("");
+  const [category, setCategory] = useState<"personal_documents" | "financial_records" | "account_credentials" | "medical_information" | "other">('personal_documents');
   const [fields, setFields] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -235,11 +235,13 @@ export default function NewEntry() {
       
       // Save additional metadata
       if (visibilityOption === "share_if_inactive" || visibilityOption === "unlock_after_date") {
-        entryData.metadata = {
+        // Convert metadata to JSON string
+        const metadataObj = {
           visibilityOption,
           inactiveDays: visibilityOption === "share_if_inactive" ? inactiveDays : undefined,
           unlockDate: visibilityOption === "unlock_after_date" && unlockDate ? unlockDate.toISOString() : undefined
         };
+        (entryData as any).metadata = metadataObj; 
       }
       
       // Create the entry
@@ -300,7 +302,10 @@ export default function NewEntry() {
                   
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
-                    <Select value={category} onValueChange={setCategory}>
+                    <Select 
+                      value={category} 
+                      onValueChange={(value: "personal_documents" | "financial_records" | "account_credentials" | "medical_information" | "other") => setCategory(value)}
+                    >
                       <SelectTrigger className="bg-[#1E293B]/50 border-primary">
                         <SelectValue placeholder="Select category" />
                       </SelectTrigger>

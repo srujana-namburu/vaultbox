@@ -8,6 +8,7 @@ import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import VaultEntries from "@/pages/vault-entries";
 import EntryDetail from "@/pages/entry-detail";
+import NewEntry from "@/pages/new-entry";
 import AboutPage from "@/pages/about-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -19,6 +20,7 @@ function Router() {
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/vault" component={VaultEntries} />
       <ProtectedRoute path="/entry/:id" component={EntryDetail} />
+      <ProtectedRoute path="/new-entry" component={NewEntry} />
       <ProtectedRoute path="/about" component={AboutPage} />
       <Route component={NotFound} />
     </Switch>
