@@ -67,6 +67,14 @@ export default function AuthPage() {
     }
   }, [twoFactorSetupData]);
   
+  // Handle successful registration
+  useEffect(() => {
+    // If registration was successful and 2FA was requested
+    if (user && registerForm.twoFactorEnabled) {
+      handle2FASetupStart();
+    }
+  }, [user, registerForm.twoFactorEnabled]);
+  
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     loginMutation.mutate(loginForm);
@@ -88,6 +96,24 @@ export default function AuthPage() {
       verifyTwoFactorMutation.mutate({
         userId: userId2FA,
         twoFactorToken
+      });
+    }
+  };
+  
+  // Start 2FA setup process 
+  const handle2FASetupStart = () => {
+    setupTwoFactorMutation.mutate();
+  };
+  
+  // Complete 2FA setup verification
+  const handle2FASetupVerify = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (twoFactorSetupData && setupToken) {
+      verifyTwoFactorSetupMutation.mutate({
+        secret: twoFactorSetupData.secret,
+        token: setupToken,
+        recoveryKeys: twoFactorSetupData.recoveryCodes
       });
     }
   };
@@ -234,141 +260,203 @@ export default function AuthPage() {
                 </TabsContent>
                 
                 <TabsContent value="register">
-                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="fullName">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                        <Input
-                          id="fullName"
-                          type="text"
-                          placeholder="John Doe"
-                          className="pl-10 bg-[#1E293B]/50 border-primary"
-                          value={registerForm.fullName}
-                          onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="regEmail">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                        <Input
-                          id="regEmail"
-                          type="email"
-                          placeholder="your@email.com"
-                          className="pl-10 bg-[#1E293B]/50 border-primary"
-                          value={registerForm.username}
-                          onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
-                          required
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="regPassword">Password</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
-                        <Input
-                          id="regPassword"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          className="pl-10 pr-10 bg-[#1E293B]/50 border-primary"
-                          value={registerForm.password}
-                          onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
-                          required
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-[#E5E5E5] hover:text-secondary"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </Button>
-                      </div>
-                      {registerForm.password && (
-                        <div className="space-y-1 mt-2">
-                          <div className="flex items-center justify-between">
-                            <Label className="text-xs">Password Strength</Label>
-                            <span className="text-xs">
-                              {passwordStrength < 30 && "Weak"}
-                              {passwordStrength >= 30 && passwordStrength < 60 && "Moderate"}
-                              {passwordStrength >= 60 && passwordStrength < 80 && "Strong"}
-                              {passwordStrength >= 80 && "Very Strong"}
-                            </span>
-                          </div>
-                          <Progress value={passwordStrength} className="h-1" 
-                            indicator={`${getPasswordStrengthColor()} transition-all duration-500`} />
-                          <ul className="text-xs space-y-1 mt-2 text-[#E5E5E5]/80">
-                            <li className={`flex items-center ${/[A-Z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
-                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
-                                {/[A-Z]/.test(registerForm.password) && "✓"}
-                              </div>
-                              Uppercase letter
-                            </li>
-                            <li className={`flex items-center ${/[a-z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
-                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
-                                {/[a-z]/.test(registerForm.password) && "✓"}
-                              </div>
-                              Lowercase letter
-                            </li>
-                            <li className={`flex items-center ${/[0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
-                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
-                                {/[0-9]/.test(registerForm.password) && "✓"}
-                              </div>
-                              Number
-                            </li>
-                            <li className={`flex items-center ${/[^A-Za-z0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
-                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
-                                {/[^A-Za-z0-9]/.test(registerForm.password) && "✓"}
-                              </div>
-                              Special character
-                            </li>
-                            <li className={`flex items-center ${registerForm.password.length >= 8 ? 'text-green-400' : ''}`}>
-                              <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
-                                {registerForm.password.length >= 8 && "✓"}
-                              </div>
-                              At least 8 characters
-                            </li>
-                          </ul>
+                  {showTwoFactorSetup && twoFactorSetupData ? (
+                    <div className="space-y-6">
+                      <div className="p-4 bg-secondary/10 rounded-lg border border-secondary/20 text-center">
+                        <Shield className="h-12 w-12 text-secondary mx-auto mb-2" />
+                        <h3 className="text-lg font-semibold text-white mb-1">Two-Factor Authentication Setup</h3>
+                        <p className="text-[#E5E5E5] text-sm mb-3">
+                          Scan the QR code with your authenticator app to enable two-factor authentication for your account.
+                        </p>
+                        
+                        <div className="bg-white rounded-lg p-4 inline-block mb-4">
+                          <img src={twoFactorSetupData.qrCode} alt="QR Code" className="mx-auto w-48 h-48" />
                         </div>
-                      )}
+                        
+                        <div className="mb-4">
+                          <form onSubmit={handle2FASetupVerify} className="space-y-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="setupToken">Verification Code</Label>
+                              <div className="relative">
+                                <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                                <Input
+                                  id="setupToken"
+                                  type="text"
+                                  placeholder="123456"
+                                  className="pl-10 bg-[#1E293B]/50 border-primary text-center font-mono text-lg tracking-widest"
+                                  value={setupToken}
+                                  onChange={(e) => setSetupToken(e.target.value)}
+                                  maxLength={6}
+                                  pattern="[0-9]*"
+                                  inputMode="numeric"
+                                  required
+                                />
+                              </div>
+                            </div>
+                            
+                            <Button 
+                              type="submit" 
+                              className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
+                              disabled={verifyTwoFactorSetupMutation.isPending || setupToken.length !== 6}
+                            >
+                              {verifyTwoFactorSetupMutation.isPending ? "Verifying..." : "Verify and Enable 2FA"}
+                            </Button>
+                          </form>
+                        </div>
+                        
+                        <div className="space-y-2 text-left">
+                          <h4 className="font-semibold text-white">Recovery Keys</h4>
+                          <p className="text-xs text-[#E5E5E5]">
+                            Store these recovery keys in a safe place. You will need them if you lose access to your authenticator app.
+                          </p>
+                          <div className="bg-[#0F172A] rounded-md p-2 font-mono text-xs">
+                            {twoFactorSetupData.recoveryCodes.map((key: string, idx: number) => (
+                              <div key={idx} className="flex items-center py-1 border-b border-[#1E293B] last:border-0">
+                                <span className="text-gray-500 mr-2 w-6">{idx + 1}.</span>
+                                <span className="text-[#E5E5E5]">{key}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="enableTwoFactor"
-                        checked={registerForm.twoFactorEnabled}
-                        onCheckedChange={(checked) => 
-                          setRegisterForm({ ...registerForm, twoFactorEnabled: Boolean(checked) })
-                        }
-                      />
-                      <Label
-                        htmlFor="enableTwoFactor"
-                        className="text-sm font-normal text-[#E5E5E5]"
+                  ) : (
+                    <form onSubmit={handleRegisterSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="fullName">Full Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="fullName"
+                            type="text"
+                            placeholder="John Doe"
+                            className="pl-10 bg-[#1E293B]/50 border-primary"
+                            value={registerForm.fullName}
+                            onChange={(e) => setRegisterForm({ ...registerForm, fullName: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="regEmail">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="regEmail"
+                            type="email"
+                            placeholder="your@email.com"
+                            className="pl-10 bg-[#1E293B]/50 border-primary"
+                            value={registerForm.username}
+                            onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
+                            required
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="regPassword">Password</Label>
+                        <div className="relative">
+                          <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary h-5 w-5" />
+                          <Input
+                            id="regPassword"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="••••••••"
+                            className="pl-10 pr-10 bg-[#1E293B]/50 border-primary"
+                            value={registerForm.password}
+                            onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                            required
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-[#E5E5E5] hover:text-secondary"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        {registerForm.password && (
+                          <div className="space-y-1 mt-2">
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">Password Strength</Label>
+                              <span className="text-xs">
+                                {passwordStrength < 30 && "Weak"}
+                                {passwordStrength >= 30 && passwordStrength < 60 && "Moderate"}
+                                {passwordStrength >= 60 && passwordStrength < 80 && "Strong"}
+                                {passwordStrength >= 80 && "Very Strong"}
+                              </span>
+                            </div>
+                            <Progress value={passwordStrength} className="h-1" 
+                              indicator={`${getPasswordStrengthColor()} transition-all duration-500`} />
+                            <ul className="text-xs space-y-1 mt-2 text-[#E5E5E5]/80">
+                              <li className={`flex items-center ${/[A-Z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                                <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                  {/[A-Z]/.test(registerForm.password) && "✓"}
+                                </div>
+                                Uppercase letter
+                              </li>
+                              <li className={`flex items-center ${/[a-z]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                                <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                  {/[a-z]/.test(registerForm.password) && "✓"}
+                                </div>
+                                Lowercase letter
+                              </li>
+                              <li className={`flex items-center ${/[0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                                <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                  {/[0-9]/.test(registerForm.password) && "✓"}
+                                </div>
+                                Number
+                              </li>
+                              <li className={`flex items-center ${/[^A-Za-z0-9]/.test(registerForm.password) ? 'text-green-400' : ''}`}>
+                                <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                  {/[^A-Za-z0-9]/.test(registerForm.password) && "✓"}
+                                </div>
+                                Special character
+                              </li>
+                              <li className={`flex items-center ${registerForm.password.length >= 8 ? 'text-green-400' : ''}`}>
+                                <div className="w-3 h-3 mr-2 rounded-full border border-current flex items-center justify-center">
+                                  {registerForm.password.length >= 8 && "✓"}
+                                </div>
+                                At least 8 characters
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="enableTwoFactor"
+                          checked={registerForm.twoFactorEnabled}
+                          onCheckedChange={(checked) => 
+                            setRegisterForm({ ...registerForm, twoFactorEnabled: Boolean(checked) })
+                          }
+                        />
+                        <Label
+                          htmlFor="enableTwoFactor"
+                          className="text-sm font-normal text-[#E5E5E5]"
+                        >
+                          Enable two-factor authentication
+                        </Label>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-xs text-[#E5E5E5]">
+                          By registering, you agree to our Terms of Service and Privacy Policy.
+                        </p>
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
+                        disabled={registerMutation.isPending}
                       >
-                        Enable two-factor authentication
-                      </Label>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <p className="text-xs text-[#E5E5E5]">
-                        By registering, you agree to our Terms of Service and Privacy Policy.
-                      </p>
-                    </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-secondary hover:bg-secondary/90 text-white shadow-glow" 
-                      disabled={registerMutation.isPending}
-                    >
-                      {registerMutation.isPending ? "Creating account..." : "Create Account"}
-                    </Button>
-                  </form>
+                        {registerMutation.isPending ? "Creating account..." : "Create Account"}
+                      </Button>
+                    </form>
+                  )}
                 </TabsContent>
               </Tabs>
             </CardContent>
