@@ -267,11 +267,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           accessLevel: trustedContacts.accessLevel,
           inactivityPeriod: trustedContacts.inactivityPeriod,
           lastInactivityResetDate: trustedContacts.lastInactivityResetDate,
-          ownerName: storage.db.users.fullName,
-          ownerEmail: storage.db.users.email
+          ownerName: users.fullName,
+          ownerEmail: users.email
         })
         .from(trustedContacts)
-        .innerJoin(storage.db.users, eq(trustedContacts.userId, storage.db.users.id))
+        .innerJoin(users, eq(trustedContacts.userId, users.id))
         .where(eq(trustedContacts.email, email));
 
       // Map the results to the expected format
