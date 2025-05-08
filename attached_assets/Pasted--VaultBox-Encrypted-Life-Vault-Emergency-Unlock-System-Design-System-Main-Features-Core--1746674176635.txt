@@ -1,0 +1,106 @@
+# VaultBox: Encrypted Life Vault & Emergency Unlock System - Design System & Main Features
+
+## Core Design System
+
+### Brand Identity
+- **App Name**: VaultBox
+- **Tagline**: "Your life's critical information, securely stored and accessible when needed most."
+- **Mission**: Provide users with a secure, encrypted personal vault that allows for emergency access by trusted contacts.
+
+### Color Palette
+- **Primary**: Deep navy blue (#1A2342) - Represents security, trust, and professionalism
+- **Secondary**: Teal accent (#00B8A9) - For action items, progress indicators, and important callouts
+- **Alert/Warning**: Amber (#F8B400) - For notifications, warnings, and time-based alerts
+- **Danger/Critical**: Deep red (#F23557) - For deletion actions and security breaches
+- **Background**: Dark gradient from #121829 to #1E293B - Creates a secure vault-like atmosphere
+- **Text**: White (#FFFFFF) for headings and light gray (#E5E5E5) for body text on dark backgrounds
+
+### Typography
+- **Headings**: Montserrat (Bold) - Clean, modern, and highly legible
+- **Body**: Inter (Regular) - Neutral, professional, and excellent for readability at smaller sizes
+- **Monospace**: Roboto Mono - For displaying sensitive information, codes, or keys
+
+### UI Components & Animation Style
+- **Component Style**: Neumorphic dark interfaces with subtle depth and shadow
+- **Border Radius**: 12px for cards, 8px for buttons
+- **Animations**:
+  - Vault door opening/closing animation for entry/exit
+  - Encryption ripple effect when saving content
+  - Countdown timer animation for expiring entries
+  - Gentle pulse for notification indicators
+  - Fingerprint scan animation for authentication
+  - Subtle hover states with glow effects reflecting the teal accent color
+
+### Icons & Visual Elements
+- **Icon Style**: Linear icons with teal glow effect
+- **Security Visualizations**: Animated locks, shields, and encryption symbols
+- **Timeline Visualization**: Vertical timeline for entry history
+- **Status Indicators**: Circular progress indicators for expiration dates
+
+## Main Features Implementation
+
+### Authentication System
+- **Login/Registration Screen**:
+  - Clean, minimalist design with large form fields
+  - Password strength meter with visual feedback
+  - Animated transition between login and registration
+  - Two-factor authentication option with visual guidance
+  - "Remember this device" toggle with security explanation
+  - Password recovery process with verification steps
+
+### Dashboard/Home
+- **Layout**: Split layout with navigation sidebar and main content area
+- **Components**:
+  - Welcome message with last login date/time
+  - Quick stats card showing number of vault entries by category
+  - Activity timeline showing recent actions
+  - Security status indicator (account security score)
+  - Notification center with unread count
+  - Quick add button for new entries that floats and pulses subtly
+
+### Vault Entry Management
+- **Entry List View**:
+  - Card-based grid layout with filter/sort options
+  - Visual category indicators (color-coded icons)
+  - Status badges (Active, Locked, Shared, Expiring Soon)
+  - Preview with masked/blurred content
+  - Contextual actions (view, edit, delete, share)
+  - Animation: Cards slide in from different directions when loading
+
+- **Entry Detail View**:
+  - Fullscreen modal with backdrop blur
+  - Decryption animation when viewing content
+  - Toggle between view/edit modes with smooth transition
+  - File attachment preview with thumbnail generation
+  - Version history expandable section
+  - Animation: Content reveals with a typewriter effect for text
+
+### About Page
+- **Sections**:
+  - Hero section with animated vault illustration
+  - "How It Works" with step-by-step visual guide
+  - Security explanation with encryption visualization
+  - Trust & Privacy commitments with visual guarantees
+  - FAQ accordion with smooth expand/collapse
+  - Contact information with animated form
+
+## Responsive Design Requirements
+- **Desktop**: Full-featured experience with split layouts and detailed visualizations
+- **Tablet**: Adapted layout with collapsible sidebar and optimized content flow
+- **Mobile**: Streamlined experience with bottom navigation and focused content views
+
+## Microinteractions & Feedback
+- Visual feedback for all user actions (success, error, loading states)
+- Progress indicators for encryption/decryption processes
+- Haptic feedback (mobile) for critical actions
+- Audio cues (optional) for security events
+- Toast notifications for system events with appropriate icons
+- Loading states with branded animations
+
+## Accessibility Considerations
+- Color contrast compliance (WCAG AA minimum)
+- Screen reader friendly labels and ARIA attributes
+- Keyboard navigation support
+- Focus states clearly visible
+- Text resizing support
+- Motion reduction option for animations
