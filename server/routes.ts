@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contacts = await storage.getTrustedContacts(userId);
       
       // Additional verification that all returned contacts belong to this user
-      const userContacts = contacts.filter(contact => contact.userId === userId);
+      const userContacts = contacts.filter(contact => contact.user_id === userId);
       
       res.json(userContacts);
     } catch (err) {
