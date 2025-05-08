@@ -376,6 +376,179 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Notifications routes
+  app.get("/api/notifications", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 20;
+      const notifications = await storage.getNotifications(userId, limit);
+      res.json(notifications);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.get("/api/notifications/unread-count", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const count = await storage.getUnreadNotificationCount(userId);
+      res.json({ count });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch unread count" });
+    }
+  });
+
+  app.post("/api/notifications/:id/mark-read", isAuthenticated, async (req, res) => {
+    try {
+      const notificationId = parseInt(req.params.id);
+      const updatedNotification = await storage.markNotificationAsRead(notificationId);
+      
+      if (!updatedNotification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      res.json(updatedNotification);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
+  app.post("/api/notifications/mark-all-read", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      await storage.markAllNotificationsAsRead(userId);
+      res.status(200).json({ message: "All notifications marked as read" });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to mark all notifications as read" });
+    }
+  });
+
+  // User devices routes
+  app.get("/api/user-devices", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const devices = await storage.getUserDevices(userId);
+      res.json(devices);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch user devices" });
+    }
+  });
+
+  app.delete("/api/user-devices/:id", isAuthenticated, async (req, res) => {
+    try {
+      const deviceId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const device = await storage.getUserDevice(deviceId);
+      
+      if (!device) {
+        return res.status(404).json({ message: "Device not found" });
+      }
+      
+      if (device.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const success = await storage.deleteUserDevice(deviceId);
+      
+      if (success) {
+        // Log activity
+        await storage.createActivityLog({
+          userId,
+          action: "security_settings_changed",
+          details: `Removed device "${device.deviceName}"`,
+          ipAddress: req.ip,
+          deviceInfo: req.headers['user-agent']
+        });
+        
+        return res.status(204).send();
+      } else {
+        return res.status(500).json({ message: "Failed to delete device" });
+      }
+    } catch (err) {
+      res.status(500).json({ message: "Failed to delete device" });
+    }
+  });
+
+  // Access requests routes
+  app.get("/api/access-requests/pending", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const requests = await storage.getPendingAccessRequests(userId);
+      res.json(requests);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch pending access requests" });
+    }
+  });
+
+  app.post("/api/access-requests/:id/respond", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { status, responseMessage } = req.body;
+      
+      if (!status || !['approved', 'denied'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const accessRequest = await storage.getAccessRequest(requestId);
+      
+      if (!accessRequest) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      // Get the contact to verify ownership
+      const contact = await storage.getTrustedContact(accessRequest.contactId);
+      
+      if (!contact || contact.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedRequest = await storage.updateAccessRequest(requestId, {
+        status,
+        responseMessage,
+        respondedAt: new Date()
+      });
+      
+      // Log activity
+      await storage.createActivityLog({
+        userId,
+        action: "security_alert",
+        details: `${status.charAt(0).toUpperCase() + status.slice(1)} access request from ${contact.name}`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers['user-agent']
+      });
+      
+      // Create notification
+      await storage.createNotification({
+        userId,
+        title: "Access Request Response",
+        message: `You have ${status} an access request from ${contact.name}`,
+        type: "security_alert",
+        priority: "high"
+      });
+      
+      res.json(updatedRequest);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to respond to access request" });
+    }
+  });
+
+  // Database status check endpoint
+  app.get("/api/health/db", async (req, res) => {
+    try {
+      // Try a simple query to check if the database is working
+      const user = await storage.getUserByUsername("test-user-that-doesnt-exist");
+      res.json({ status: "ok", message: "Database connection is working properly" });
+    } catch (err) {
+      res.status(500).json({ 
+        status: "error", 
+        message: "Database connection failed", 
+        error: err instanceof Error ? err.message : String(err) 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

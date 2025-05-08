@@ -42,7 +42,9 @@ import { pool } from "./db";
 
 // Configure PostgreSQL session store
 const PostgresSessionStore = connectPg(session);
-type SessionStore = ReturnType<typeof connectPg>;
+
+// Define session store type
+type SessionStore = ReturnType<typeof PostgresSessionStore>;
 
 export interface IStorage {
   // User operations
@@ -119,11 +121,11 @@ export interface IStorage {
   getActivityLogs(userId: number, limit?: number): Promise<ActivityLog[]>;
   createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any to resolve type issues
 }
 
 export class DatabaseStorage implements IStorage {
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Using any to resolve type issues
   
   constructor() {
     this.sessionStore = new PostgresSessionStore({
@@ -255,7 +257,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(vaultEntries.userId, userId),
-          eq(vaultEntries.category, category)
+          sql`${vaultEntries.category} = ${category}` // Using SQL template for safe comparison
         )
       )
       .orderBy(desc(vaultEntries.updatedAt));

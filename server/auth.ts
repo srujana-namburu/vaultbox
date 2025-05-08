@@ -100,7 +100,9 @@ export function setupAuth(app: Express) {
 
   // Enhanced local strategy with account locking
   passport.use(
-    new LocalStrategy(async (username, password, done) => {
+    new LocalStrategy({
+      passReqToCallback: true // Pass request to callback
+    }, async (req: Request, username: string, password: string, done: any) => {
       try {
         // Find user by username or email
         let user = await storage.getUserByUsername(username);
@@ -126,7 +128,7 @@ export function setupAuth(app: Express) {
         
         if (!isValid) {
           // Increment failed login attempts
-          const attempts = (user.failedLoginAttempts || 0) + 1;
+          const attempts = (user.failedLoginAttempts ?? 0) + 1;
           await storage.updateUserFailedLoginAttempts(user.id, attempts);
           
           // Lock account if max attempts reached
@@ -158,7 +160,7 @@ export function setupAuth(app: Express) {
         }
         
         // Reset failed login attempts on successful login
-        if (user.failedLoginAttempts > 0) {
+        if (user.failedLoginAttempts && user.failedLoginAttempts > 0) {
           await storage.updateUserFailedLoginAttempts(user.id, 0);
         }
         
