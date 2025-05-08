@@ -262,16 +262,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contacts = await storage.db
         .select({
           contactId: trustedContacts.id,
-          userId: trustedContacts.userId,
+          userId: trustedContacts.user_id,
           status: trustedContacts.status,
           accessLevel: trustedContacts.accessLevel,
           inactivityPeriod: trustedContacts.inactivityPeriod,
           lastInactivityResetDate: trustedContacts.lastInactivityResetDate,
-          ownerName: users.full_name,
-          ownerEmail: users.email
+          ownerName: storage.db.dynamic.ref('full_name', 'users'),
+          ownerEmail: storage.db.dynamic.ref('email', 'users')
         })
         .from(trustedContacts)
-        .innerJoin(users, eq(trustedContacts.user_id, users.id))
+        .innerJoin('users', eq(trustedContacts.user_id, storage.db.dynamic.ref('id', 'users')))
         .where(eq(trustedContacts.email, email));
 
       // Map the results to the expected format
