@@ -8,11 +8,13 @@ import {
   Clock,
   Settings,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  Bell
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
+import { NotificationCenter } from "@/components/notifications/notification-center";
 
 export function Sidebar() {
   const [location] = useLocation();
