@@ -67,7 +67,7 @@ export default function TrustedContactPage() {
         name: contact.name,
         email: contact.email,
         relationship: contact.relationshipType,
-        inactivityPeriod: contact.inactivityPeriodDays,
+        inactivityPeriod: Number(contact.inactivityPeriodDays),
         personalMessage: "",
         waitingPeriod: "48 hours" // Default 48 hours
       });

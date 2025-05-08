@@ -199,6 +199,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to delete vault entry" });
     }
   });
+  
+  // Entry version routes
+  app.get("/api/vault-entries/:id/versions", isAuthenticated, async (req, res) => {
+    try {
+      const entryId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const entry = await storage.getVaultEntry(entryId);
+      
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      
+      if (entry.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const versions = await storage.getEntryVersions(entryId);
+      res.json(versions);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch entry versions" });
+    }
+  });
+  
+  app.get("/api/entry-versions/:id", isAuthenticated, async (req, res) => {
+    try {
+      const versionId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const version = await storage.getEntryVersion(versionId);
+      
+      if (!version) {
+        return res.status(404).json({ message: "Version not found" });
+      }
+      
+      // Check if the user owns the entry this version belongs to
+      const entry = await storage.getVaultEntry(version.entryId);
+      
+      if (!entry || entry.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      res.json(version);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch entry version" });
+    }
+  });
 
   // Trusted contacts routes
   app.get("/api/trusted-contacts", isAuthenticated, async (req, res) => {
