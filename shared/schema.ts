@@ -166,7 +166,7 @@ export const trustedContacts = pgTable("trusted_contacts", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone"),
-  relationship: relationshipTypeEnum("relationship").default('other'),
+  relationshipType: relationshipTypeEnum("relationship_type").default('other'),
   status: contactStatusEnum("status").default('pending'),
   accessLevel: accessLevelEnum("access_level").notNull(),
   inactivityPeriod: integer("inactivity_period").default(30), // Days until inactivity triggers access
@@ -306,7 +306,7 @@ export const insertTrustedContactSchema = createInsertSchema(trustedContacts).pi
   name: true,
   email: true,
   phone: true,
-  relationship: true,
+  relationshipType: true,
   status: true,
   accessLevel: true,
   inactivityPeriod: true,
