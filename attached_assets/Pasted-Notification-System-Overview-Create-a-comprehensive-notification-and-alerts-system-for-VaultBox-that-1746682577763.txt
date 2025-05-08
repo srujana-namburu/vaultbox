@@ -1,0 +1,135 @@
+Notification System Overview
+Create a comprehensive notification and alerts system for VaultBox that keeps users informed about critical security events through both in-app notifications and email alerts (simulated). The notification system should feel security-focused, timely, and provide clear actionable information.
+
+In-App Notification Center
+Visual Design
+Design a notification bell icon in the top navigation bar with:
+Unread count indicator (red badge)
+Dropdown panel for notification display
+Clear visual hierarchy between read/unread notifications
+Use color-coding for notification priorities:
+Red: Emergency access attempts
+Orange: Expiring entries
+Yellow: Inactivity warnings
+Blue: Informational updates
+Notification Components
+Create a notification card component with:
+
+Icon representing notification type
+Brief notification text
+Timestamp
+Read/unread status indicator
+Action buttons relevant to the notification type
+Dismiss option
+Implement notification grouping by type:
+
+"Access Requests" section
+"Expiring Content" section
+"Security Alerts" section
+Real-Time Alerts
+Design overlay alert components for critical notifications that appear immediately:
+Non-intrusive toast notifications for less critical alerts
+Modal alerts for emergency access attempts that require action
+Banner alerts for system-wide notifications
+Notification Types & Content
+1. Trusted Contact Access Attempts
+Create alerts showing:
+Contact name and email
+Time of access attempt
+Which entries they're requesting access to
+Countdown until automatic access is granted
+"Deny Access" and "Grant Access Now" buttons
+Option to contact the trusted person
+2. Entry Expiration Notifications
+Design expiration warning alerts:
+Entry title and category
+Days/hours remaining until deletion
+Preview thumbnail if applicable
+"Extend" and "Let Expire" action buttons
+Option to download before expiration
+3. Inactivity Warnings
+Implement graduated inactivity notifications:
+Early warning at 50% of inactivity threshold
+Urgent warning at 75% of inactivity threshold
+Critical warning at 90% of inactivity threshold
+Include "Log In Now" direct link
+Display last login information
+4. General Security Alerts
+Design general security notification templates:
+New device login
+Password changes
+Trusted contact changes
+Failed login attempts
+System maintenance alerts
+Email Notification Templates
+Design System for Emails
+Create branded email templates with:
+VaultBox logo and security imagery
+Clear subject lines for quick identification
+Concise, action-oriented content
+Prominent call-to-action buttons
+Security tips in footer
+Email Notification Types
+Emergency Access Request Email
+
+Subject: "URGENT: [Contact Name] is requesting access to your VaultBox"
+Content highlighting the urgency
+Direct "Review Request" button
+Timeline for automatic access
+Security reminder about account access
+Entry Expiration Email
+
+Subject: "Action Required: [X] entries in your VaultBox expire soon"
+List of expiring entries with dates
+"Extend Storage" button
+Brief explanation of auto-delete functionality
+Inactivity Warning Email
+
+Subject: "Security Alert: Your VaultBox has been inactive for [X] days"
+Reminder about trusted contact access rules
+"Log In Now" prominent button
+Account protection recommendations
+Notification Settings Panel
+Create a notification preferences screen allowing users to:
+Toggle email notifications on/off by category
+Set notification frequency (immediate, daily digest, weekly)
+Customize which events trigger notifications
+Test notification delivery
+Set quiet hours for non-critical notifications
+Notification State Management
+Implement notification tracking system:
+Read/unread status
+Dismissed notifications
+Action taken on notifications
+Notification history for audit purposes
+Auto-archive settings for old notifications
+Push Notification Integration (Optional)
+Design push notification templates for mobile/desktop:
+Brief content suitable for push format
+Deep linking to relevant application area
+Critical vs. non-critical categorization
+Notification Analytics Dashboard
+Create an analytics section in settings showing:
+Notification frequency by type
+Response rates to notifications
+Average response time
+Notification preference statistics
+Technical Integration Requirements
+Notification system should integrate with:
+Authentication system for security events
+Vault entry system for expiration tracking
+Activity tracking for inactivity detection
+Trusted contact system for access requests
+Accessibility Considerations
+Ensure notifications are:
+Screen-reader compatible
+Keyboard navigable
+Color-contrast compliant
+Available in multiple formats (visual, email, etc.)
+Implementation Notes
+All notification timestamps should respect user's timezone
+Provide notification frequency throttling to prevent alert fatigue
+Include notification sounds for critical alerts (with mute option)
+Store notification history for security audit purposes
+Implement read receipts for critical security notifications
+This comprehensive notification system should make users feel confident that their vault is constantly monitored while providing actionable alerts that help maintain security without causing alert fatigue.
