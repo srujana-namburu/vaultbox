@@ -1237,6 +1237,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Activity Logs endpoint
+  app.get("/api/activity-logs", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const activityLogs = await storage.getActivityLogs(userId);
+      res.json(activityLogs);
+    } catch (err) {
+      console.error("Error fetching activity logs:", err);
+      res.status(500).json({ message: "Failed to fetch activity logs" });
+    }
+  });
+
   // Database status check endpoint
   app.get("/api/health/db", async (req, res) => {
     try {

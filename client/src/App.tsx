@@ -15,9 +15,12 @@ import EmergencyRequestPage from "@/pages/emergency-request-page";
 import EmergencyAccessPage from "@/pages/emergency-access-page";
 import NotificationsPage from "@/pages/notifications-page";
 import NotificationSettings from "@/pages/notification-settings";
+import ActivityPage from "@/pages/activity-page";
+import SettingsPage from "@/pages/settings-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 import { NotificationProvider } from "@/hooks/use-notifications";
+import { ActivityLogProvider } from "@/hooks/use-activity-log";
 
 function Router() {
   return (
@@ -32,6 +35,8 @@ function Router() {
       <ProtectedRoute path="/trusted-contacts" component={TrustedContactPage} />
       <ProtectedRoute path="/notifications" component={NotificationsPage} />
       <ProtectedRoute path="/notification-settings" component={NotificationSettings} />
+      <ProtectedRoute path="/activity" component={ActivityPage} />
+      <ProtectedRoute path="/settings" component={SettingsPage} />
       <ProtectedRoute path="/about" component={AboutPage} />
       <Route component={NotFound} />
     </Switch>
@@ -43,10 +48,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <NotificationProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
+          <ActivityLogProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Router />
+            </TooltipProvider>
+          </ActivityLogProvider>
         </NotificationProvider>
       </AuthProvider>
     </QueryClientProvider>
