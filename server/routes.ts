@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('User email:', email);
 
       // Find all contacts where this user's email matches with joined user data
-      const contacts = await db
+      const contacts = await storage.db
         .select({
           contactId: trustedContacts.id,
           userId: trustedContacts.userId,
@@ -271,7 +271,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           inactivityPeriod: trustedContacts.inactivityPeriod,
           lastInactivityResetDate: trustedContacts.lastInactivityResetDate,
           ownerName: users.fullName,
-          ownerEmail: users.email
+          ownerEmail: users.email,
+          daysSinceLastActivity: sql<number>`EXTRACT(DAY FROM NOW() - ${trustedContacts.lastInactivityResetDate})`,
+          inactivityThreshold: trustedContacts.inactivityPeriod
         })
         .from(trustedContacts)
         .innerJoin(users, eq(trustedContacts.userId, users.id))
