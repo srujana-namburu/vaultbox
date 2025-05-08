@@ -24,7 +24,7 @@ type AuthContextType = {
   requires2FA: boolean;
   userId2FA: number | null;
   twoFactorSetupData: TwoFactorSetupResult | null;
-  formatLastLogin: (date: Date | null | undefined) => string;
+  formatLastLogin: (date: string | Date | null | undefined) => string;
   calculatePasswordStrength: (password: string) => number;
 };
 
@@ -68,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useQuery<SelectUser | null, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    refetchInterval: 10000,
   });
 
   const loginMutation = useMutation({
@@ -255,15 +256,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
   
-  const formatLastLogin = (date: Date | null | undefined): string => {
+  const formatLastLogin = (date: string | Date | null | undefined): string => {
     if (!date) return "Never";
-    
     try {
-      // Convert string to Date object if needed
       const dateObj = typeof date === 'string' ? new Date(date) : date;
+      if (!dateObj || isNaN(dateObj.getTime())) return "Never";
       return format(dateObj, "MMMM d, yyyy 'at' h:mm a");
     } catch (error) {
-      return "Invalid date";
+      return "Never";
     }
   };
   
