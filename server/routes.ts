@@ -256,8 +256,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/trusted-contacts", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;
+      // Get contacts specifically for this user
       const contacts = await storage.getTrustedContacts(userId);
-      res.json(contacts);
+      
+      // Additional verification that all returned contacts belong to this user
+      const userContacts = contacts.filter(contact => contact.userId === userId);
+      
+      res.json(userContacts);
     } catch (err) {
       console.error("Trusted contacts error:", err);
       res.status(500).json({ message: "Failed to fetch trusted contacts" });
