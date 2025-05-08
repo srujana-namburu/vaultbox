@@ -89,6 +89,8 @@ export interface IStorage {
   getTrustedContacts(userId: number): Promise<TrustedContact[]>;
   getTrustedContact(id: number): Promise<TrustedContact | undefined>;
   getTrustedContactByEmail(userId: number, email: string): Promise<TrustedContact | undefined>;
+  getTrustedContactByUserId(userId: number): Promise<TrustedContact | undefined>;
+  updateTrustedContactInactivityReset(id: number): Promise<TrustedContact | undefined>;
   createTrustedContact(contact: InsertTrustedContact): Promise<TrustedContact>;
   updateTrustedContact(id: number, contact: Partial<TrustedContact>): Promise<TrustedContact | undefined>;
   deleteTrustedContact(id: number): Promise<boolean>;
@@ -105,7 +107,7 @@ export interface IStorage {
   getAccessRequests(contactId: number): Promise<AccessRequest[]>;
   getPendingAccessRequests(userId: number): Promise<AccessRequest[]>;
   getAccessRequest(id: number): Promise<AccessRequest | undefined>;
-  createAccessRequest(request: InsertAccessRequest): Promise<AccessRequest>;
+  createAccessRequest(request: Partial<AccessRequest>): Promise<AccessRequest>;
   updateAccessRequest(id: number, request: Partial<AccessRequest>): Promise<AccessRequest | undefined>;
   deleteAccessRequest(id: number): Promise<boolean>;
   
@@ -121,11 +123,15 @@ export interface IStorage {
   getActivityLogs(userId: number, limit?: number): Promise<ActivityLog[]>;
   createActivityLog(log: InsertActivityLog): Promise<ActivityLog>;
   
+  // Database access
+  db: any;
+  
   sessionStore: any; // Using any to resolve type issues
 }
 
 export class DatabaseStorage implements IStorage {
   sessionStore: any; // Using any to resolve type issues
+  db = db; // Expose db for direct schema operations
   
   constructor() {
     this.sessionStore = new PostgresSessionStore({
@@ -501,9 +507,9 @@ export class DatabaseStorage implements IStorage {
     return request;
   }
   
-  async createAccessRequest(request: InsertAccessRequest): Promise<AccessRequest> {
+  async createAccessRequest(request: Partial<AccessRequest>): Promise<AccessRequest> {
     // Calculate when this request should automatically approve based on the contact's waiting period
-    const contact = await this.getTrustedContact(request.contactId);
+    const contact = await this.getTrustedContact(request.contactId!);
     if (!contact) {
       throw new Error('Contact not found');
     }
@@ -533,10 +539,15 @@ export class DatabaseStorage implements IStorage {
     const [newRequest] = await db
       .insert(accessRequests)
       .values({
-        ...request,
+        contactId: request.contactId!,
+        reason: request.reason || 'Emergency access request',
+        status: 'pending',
         requestedAt: now,
         autoApproveAt: autoApproveDate,
-        expiresAt: expiryDate
+        expiresAt: expiryDate,
+        ipAddress: request.ipAddress,
+        deviceInfo: request.deviceInfo,
+        urgencyLevel: request.urgencyLevel || 'medium'
       })
       .returning();
     

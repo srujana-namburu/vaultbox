@@ -29,6 +29,11 @@ export const activityTypeEnum = pgEnum('activity_type', [
   'contact_access_granted',
   'contact_access_revoked',
   'inactivity_threshold_reset',
+  'inactivity_timer_reset',
+  'emergency_access_requested',
+  'emergency_access_granted',
+  'emergency_access_denied',
+  'emergency_access_triggered',
   'login',
   'logout',
   'account_created',
@@ -333,7 +338,8 @@ export const insertAccessRequestSchema = createInsertSchema(accessRequests).pick
   reason: true,
   urgencyLevel: true,
   ipAddress: true,
-  deviceInfo: true
+  deviceInfo: true,
+  status: true
 });
 
 export const insertNotificationSchema = createInsertSchema(notifications).pick({

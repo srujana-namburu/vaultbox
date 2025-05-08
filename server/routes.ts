@@ -2,7 +2,18 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { insertVaultEntrySchema, insertTrustedContactSchema, insertSharedEntrySchema } from "@shared/schema";
+import { 
+  insertVaultEntrySchema, 
+  insertTrustedContactSchema, 
+  insertSharedEntrySchema,
+  insertActivityLogSchema,
+  insertAccessRequestSchema,
+  insertNotificationSchema,
+  insertUserDeviceSchema,
+  trustedContacts,
+  accessRequests
+} from "@shared/schema";
+import { eq, asc, and, desc, sql, isNotNull } from "drizzle-orm";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 
