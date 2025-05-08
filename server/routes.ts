@@ -207,6 +207,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const contacts = await storage.getTrustedContacts(userId);
       res.json(contacts);
     } catch (err) {
+      console.error("Trusted contacts error:", err);
       res.status(500).json({ message: "Failed to fetch trusted contacts" });
     }
   });
@@ -381,11 +382,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "You are not a trusted contact for this user" });
       }
       
+      // Check if there's an existing pending request
+      const existingRequests = await storage.getAccessRequests(contact.id);
+      const pendingRequest = existingRequests.find(req => req.status === 'pending');
+      
+      if (pendingRequest) {
+        return res.status(400).json({ 
+          message: "You already have a pending emergency access request",
+          requestId: pendingRequest.id,
+          autoApproveAt: pendingRequest.autoApproveAt
+        });
+      }
+      
+      // Calculate auto-approve date (48 hours from now by default)
+      const autoApproveAt = new Date();
+      autoApproveAt.setHours(autoApproveAt.getHours() + 48);
+      
       // Create an access request
       const accessRequest = await storage.createAccessRequest({
         contactId: contact.id,
         reason,
-        status: 'pending'
+        status: 'pending',
+        requestedAt: new Date(),
+        autoApproveAt
       });
       
       // Create a notification for the vault owner
@@ -412,7 +431,316 @@ export async function registerRoutes(app: Express): Promise<Server> {
         autoApproveAt: accessRequest.autoApproveAt
       });
     } catch (err) {
+      console.error("Emergency access request error:", err);
       res.status(500).json({ message: "Failed to create emergency access request" });
+    }
+  });
+  
+  // Get pending access requests for a user
+  app.get("/api/emergency-requests/pending", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const pendingRequests = await storage.getPendingAccessRequests(userId);
+      res.json(pendingRequests);
+    } catch (err) {
+      console.error("Pending emergency requests error:", err);
+      res.status(500).json({ message: "Failed to fetch pending access requests" });
+    }
+  });
+  
+  // Get specific emergency request
+  app.get("/api/emergency-requests/:id", async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const accessRequest = await storage.getAccessRequest(requestId);
+      
+      if (!accessRequest) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      res.json(accessRequest);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch access request" });
+    }
+  });
+  
+  // Approve emergency access request
+  app.put("/api/emergency-requests/:id/approve", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { note } = req.body;
+      
+      // Get the request
+      const request = await storage.getAccessRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      // Get the associated contact to verify ownership
+      const contact = await storage.getTrustedContact(request.contactId);
+      
+      if (!contact || contact.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Calculate access expiration (24 hours from now)
+      const accessExpiresAt = new Date();
+      accessExpiresAt.setHours(accessExpiresAt.getHours() + 24);
+      
+      // Generate a secure access token
+      const accessToken = crypto.randomBytes(32).toString('hex');
+      
+      // Update the request
+      const updatedRequest = await storage.updateAccessRequest(requestId, {
+        status: 'approved',
+        responseNote: note,
+        accessToken,
+        accessExpiresAt
+      });
+      
+      // Log the activity
+      await storage.createActivityLog({
+        userId,
+        action: "emergency_access_approved",
+        details: `Approved emergency access for ${contact.name}`,
+        ipAddress: req.ip
+      });
+      
+      // Create a notification for the contact
+      await storage.createNotification({
+        userId,
+        title: "Emergency Access Approved",
+        message: `You approved emergency access for ${contact.name}`,
+        type: "emergency_access_approved",
+        priority: "high"
+      });
+      
+      res.json(updatedRequest);
+    } catch (err) {
+      console.error("Approve emergency request error:", err);
+      res.status(500).json({ message: "Failed to approve access request" });
+    }
+  });
+  
+  // Deny emergency access request
+  app.put("/api/emergency-requests/:id/deny", isAuthenticated, async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      const { note } = req.body;
+      
+      // Get the request
+      const request = await storage.getAccessRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      // Get the associated contact to verify ownership
+      const contact = await storage.getTrustedContact(request.contactId);
+      
+      if (!contact || contact.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Update the request
+      const updatedRequest = await storage.updateAccessRequest(requestId, {
+        status: 'denied',
+        responseNote: note
+      });
+      
+      // Log the activity
+      await storage.createActivityLog({
+        userId,
+        action: "emergency_access_denied",
+        details: `Denied emergency access for ${contact.name}`,
+        ipAddress: req.ip
+      });
+      
+      // Create a notification for the user
+      await storage.createNotification({
+        userId,
+        title: "Emergency Access Denied",
+        message: `You denied emergency access for ${contact.name}`,
+        type: "emergency_access_denied",
+        priority: "medium"
+      });
+      
+      res.json(updatedRequest);
+    } catch (err) {
+      console.error("Deny emergency request error:", err);
+      res.status(500).json({ message: "Failed to deny access request" });
+    }
+  });
+  
+  // Verify emergency access token
+  app.post("/api/emergency-access/verify", async (req, res) => {
+    try {
+      const { token, requestId, contactId } = req.body;
+      
+      if (!token || !requestId || !contactId) {
+        return res.status(400).json({ valid: false, message: "Missing required parameters" });
+      }
+      
+      // Get the request
+      const request = await storage.getAccessRequest(parseInt(requestId));
+      
+      if (!request) {
+        return res.status(404).json({ valid: false, message: "Access request not found" });
+      }
+      
+      // Verify the token and request status
+      if (request.contactId !== parseInt(contactId)) {
+        return res.status(403).json({ valid: false, message: "Invalid access token" });
+      }
+      
+      if (request.accessToken !== token) {
+        return res.status(403).json({ valid: false, message: "Invalid access token" });
+      }
+      
+      if (request.status !== 'approved') {
+        return res.status(403).json({ valid: false, message: "Access request has not been approved" });
+      }
+      
+      // Check if access has expired
+      if (request.accessExpiresAt && new Date(request.accessExpiresAt) < new Date()) {
+        return res.status(403).json({ valid: false, message: "Access has expired" });
+      }
+      
+      // Get the contact for logging
+      const contact = await storage.getTrustedContact(request.contactId);
+      
+      // Log the access
+      if (contact) {
+        await storage.createActivityLog({
+          userId: contact.userId,
+          action: "emergency_access_used",
+          details: `${contact.name} accessed the vault using emergency access`,
+          ipAddress: req.ip,
+          deviceInfo: req.headers['user-agent']
+        });
+      }
+      
+      res.json({ valid: true });
+    } catch (err) {
+      console.error("Verify emergency access error:", err);
+      res.status(500).json({ valid: false, message: "Failed to verify access" });
+    }
+  });
+  
+  // Get emergency accessible vault entries
+  app.get("/api/emergency-access/:requestId", async (req, res) => {
+    try {
+      const requestId = parseInt(req.params.requestId);
+      
+      // Get the request
+      const request = await storage.getAccessRequest(requestId);
+      
+      if (!request) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      // Verify the request status
+      if (request.status !== 'approved') {
+        return res.status(403).json({ message: "Access request has not been approved" });
+      }
+      
+      // Check if access has expired
+      if (request.accessExpiresAt && new Date(request.accessExpiresAt) < new Date()) {
+        return res.status(403).json({ message: "Access has expired" });
+      }
+      
+      // Get the contact
+      const contact = await storage.getTrustedContact(request.contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      // Get shared entries for this contact
+      const sharedEntries = await storage.getSharedEntriesByContact(contact.id);
+      
+      if (!sharedEntries || sharedEntries.length === 0) {
+        return res.json([]);
+      }
+      
+      // Get the actual vault entries
+      const entryIds = sharedEntries.map(se => se.entryId);
+      const entries = [];
+      
+      for (const entryId of entryIds) {
+        const entry = await storage.getVaultEntry(entryId);
+        if (entry) {
+          entries.push(entry);
+        }
+      }
+      
+      // Log this access
+      await storage.createActivityLog({
+        userId: contact.userId,
+        action: "emergency_access_used",
+        details: `${contact.name} viewed emergency accessible vault entries`,
+        ipAddress: req.ip
+      });
+      
+      res.json(entries);
+    } catch (err) {
+      console.error("Emergency access entries error:", err);
+      res.status(500).json({ message: "Failed to fetch emergency accessible entries" });
+    }
+  });
+  
+  // Download an emergency accessible entry
+  app.get("/api/emergency-access/download/:entryId", async (req, res) => {
+    try {
+      const entryId = parseInt(req.params.entryId);
+      const { requestId, contactId } = req.query;
+      
+      if (!requestId || !contactId) {
+        return res.status(400).json({ message: "Missing required parameters" });
+      }
+      
+      // Get the request
+      const request = await storage.getAccessRequest(parseInt(requestId as string));
+      
+      if (!request) {
+        return res.status(404).json({ message: "Access request not found" });
+      }
+      
+      // Verify the request
+      if (request.contactId !== parseInt(contactId as string) || request.status !== 'approved') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      // Get the entry
+      const entry = await storage.getVaultEntry(entryId);
+      
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      
+      // Get the contact
+      const contact = await storage.getTrustedContact(request.contactId);
+      
+      // Log the download
+      if (contact) {
+        await storage.createActivityLog({
+          userId: contact.userId,
+          action: "emergency_access_download",
+          details: `${contact.name} downloaded "${entry.title}" using emergency access`,
+          ipAddress: req.ip
+        });
+      }
+      
+      // Return the entry in a downloadable format
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="${entry.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json"`);
+      res.json(entry);
+    } catch (err) {
+      console.error("Emergency access download error:", err);
+      res.status(500).json({ message: "Failed to download entry" });
     }
   });
 

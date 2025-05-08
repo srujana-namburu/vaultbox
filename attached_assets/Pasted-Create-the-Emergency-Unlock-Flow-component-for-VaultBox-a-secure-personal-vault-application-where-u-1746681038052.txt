@@ -1,0 +1,107 @@
+Create the Emergency Unlock Flow component for VaultBox, a secure personal vault application where users can store encrypted sensitive information and designate trusted contacts for emergency access. This is a critical feature that allows trusted contacts to request access to the vault in case of emergencies, with appropriate safeguards.
+Design Principles
+
+Security-focused with a dark, vault-like aesthetic
+Clear visual indicators for critical actions
+Intuitive flows with confirmation steps for irreversible actions
+Responsive design that works on mobile and desktop
+
+Frontend Components to Implement
+1. Trusted Contact Request Page
+Create a standalone page accessible without login that allows a trusted contact to request emergency access:
+
+Clean, professional interface explaining the emergency access concept
+Form with fields for:
+
+Trusted contact's email
+Optional reason for request
+Checkbox confirmation: "I confirm this is an emergency request"
+
+
+Clear submission button with vault-themed styling
+Success message explaining the next steps (notification sent to owner, waiting period)
+Visual countdown indicator showing when access might be granted
+
+2. Vault Owner Notification System
+
+Prominent notification banner in the vault owner's dashboard showing pending emergency requests
+Detailed modal view showing:
+
+Which trusted contact made the request
+When the request was made
+When automatic access will be granted (countdown timer)
+Option to approve request immediately
+Option to deny request with confirmation
+
+
+Email notification template for alerting the vault owner
+
+3. Emergency Access Management
+
+Interface for vault owners to manage emergency request status
+List view of all pending and past emergency access requests
+Ability to extend the waiting period before automatic access
+Option to revoke a trusted contact's access even after granted
+
+4. Trusted Contact Access Portal
+
+Special limited view of the vault for trusted contacts when access is granted
+Clear labeling that this is emergency access mode
+List of only the entries the vault owner has marked for emergency access
+Read-only view of encrypted content that was designated as "Shared if inactive"
+No ability to modify or delete entries
+Visual indication of any time limitations on access
+
+Database Requirements
+
+Store emergency access requests with timestamps
+Track access attempt status (requested, approved, denied, auto-granted)
+Link trusted contacts to specific vault entries they can access
+Store access expiration dates
+
+API Endpoints Needed
+
+POST /api/emergency-request - For trusted contacts to submit access requests
+GET /api/emergency-requests - For vault owners to view pending requests
+PUT /api/emergency-requests/ - To approve/deny requests
+GET /api/emergency-access/ - For trusted contacts to access approved content
+
+Security Considerations
+
+Implement rate limiting for emergency requests to prevent abuse
+Create secure, time-limited access tokens for trusted contacts
+Maintain a comprehensive audit log of all emergency access attempts
+Ensure all communications about emergency access are authenticated
+
+User Flows to Implement
+
+Request Initiation Flow:
+
+Trusted contact visits unique URL
+Submits email and request details
+Receives confirmation with next steps
+
+
+Owner Notification Flow:
+
+Vault owner receives email notification
+In-app notification appears
+Owner can approve, deny, or let the timer continue
+
+
+Auto-Grant Access Flow:
+
+If owner doesn't respond within configured time
+System automatically grants access to designated entries
+Trusted contact receives access notification
+
+
+Access Viewing Flow:
+
+Trusted contact accesses vault with special link
+Views only approved/designated entries
+Can download or view content but not modify
+
+
+
+Ensure all interfaces reinforce the secure, intentional nature of the application with appropriate warnings, confirmations, and visual cues matching the vault-like theme.RetryClaude can make mistakes. Please double-check responses. 3.7 Sonnet
