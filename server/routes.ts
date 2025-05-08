@@ -37,6 +37,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch vault entries" });
     }
   });
+  
+  // Get category statistics
+  app.get("/api/vault-entries/categories", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const entries = await storage.getVaultEntries(userId);
+      
+      const categoryStats = entries.reduce((stats: Record<string, number>, entry) => {
+        const category = entry.category;
+        stats[category] = (stats[category] || 0) + 1;
+        return stats;
+      }, {});
+      
+      res.json(categoryStats);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to fetch category statistics" });
+    }
+  });
 
   app.get("/api/vault-entries/:id", isAuthenticated, async (req, res) => {
     try {
@@ -67,6 +85,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(entries);
     } catch (err) {
       res.status(500).json({ message: "Failed to fetch entries by category" });
+    }
+  });
+  
+  app.get("/api/vault-entries/search", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const query = req.query.q as string;
+      
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+      
+      const entries = await storage.searchVaultEntries(userId, query);
+      res.json(entries);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to search vault entries" });
     }
   });
 
@@ -351,7 +385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Log activity
         await storage.createActivityLog({
           userId,
-          action: "sharing_removed",
+          action: "entry_updated",
           details: `Removed sharing for "${vaultEntry.title}"`
         });
         

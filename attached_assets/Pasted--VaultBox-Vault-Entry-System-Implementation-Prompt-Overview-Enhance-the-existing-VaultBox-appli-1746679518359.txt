@@ -1,0 +1,195 @@
+# VaultBox Vault Entry System Implementation Prompt
+
+## Overview
+Enhance the existing VaultBox application on Replit by implementing a comprehensive Vault Entry System. This feature will allow users to create, view, edit, and delete encrypted entries with customizable security settings.
+
+## Technical Requirements
+
+### Frontend Components
+
+1. **Entry Creation Form**
+   - Create a modal or dedicated page with form fields for:
+     - Title field (required)
+     - Category dropdown (Finance, Health, Personal, Notes)
+     - Content area (rich text editor or markdown support)
+     - File upload capability with preview
+     - Auto-delete date selector (datepicker with optional toggle)
+     - Visibility settings radio buttons:
+       - Private (default)
+       - Shared if inactive for X days (with day selector)
+       - Unlock after specific date (with datepicker)
+   - "Create Entry" button that triggers encryption
+   - Visual confirmation of successful encryption
+
+2. **Vault Entry List View**
+   - Grid or list display showing:
+     - Entry title
+     - Category with appropriate icon
+     - Creation date
+     - Status indicator (Active, Expiring Soon, Pending Share)
+     - Preview of content (masked/truncated)
+   - Sorting options (newest, alphabetical, category, expiration)
+   - Search and filter functionality
+   - Visual indicators for entries approaching auto-deletion
+
+3. **Entry Detail View**
+   - Decrypted content display with "viewing mode" indicator
+   - Metadata panel showing all settings
+   - Edit button to modify entry
+   - Delete button with confirmation dialog
+   - Copy content button with temporary clipboard access
+   - Security status (when will it expire, sharing status)
+
+4. **Entry Management Controls**
+   - Edit functionality that maintains encryption integrity
+   - Delete confirmation with "type to confirm" security
+   - Option to extend or modify auto-deletion settings
+   - Ability to change visibility settings after creation
+
+### Backend Requirements
+
+1. **Data Structure**
+   - Implement a `VaultEntry` model with:
+     - Unique identifier
+     - User reference (owner)
+     - Title (string)
+     - Category (enum)
+     - Encrypted content (text)
+     - File reference (if applicable)
+     - Creation timestamp
+     - Last modified timestamp
+     - Auto-delete timestamp (nullable)
+     - Visibility settings (object with type and parameters)
+     - Encryption metadata (for decryption purposes)
+
+2. **Encryption Implementation**
+   - Utilize crypto-js for client-side encryption:
+     ```javascript
+     // Example implementation approach
+     import CryptoJS from 'crypto-js';
+     
+     // Encrypt function
+     const encryptContent = (content, userKey) => {
+       return CryptoJS.AES.encrypt(content, userKey).toString();
+     };
+     
+     // Decrypt function
+     const decryptContent = (encryptedContent, userKey) => {
+       const bytes = CryptoJS.AES.decrypt(encryptedContent, userKey);
+       return bytes.toString(CryptoJS.enc.Utf8);
+     };
+     ```
+   - Store encryption keys securely (consider key derivation from user password)
+   - Implement separate encryption for files with chunked processing for larger files
+
+3. **API Endpoints**
+   - `POST /api/entries` - Create new entry
+   - `GET /api/entries` - List all entries (metadata only)
+   - `GET /api/entries/:id` - Get single entry with decryption
+   - `PUT /api/entries/:id` - Update entry
+   - `DELETE /api/entries/:id` - Delete entry
+   - `GET /api/entries/categories` - Get category statistics
+
+4. **Auto-deletion System**
+   - Implement a background job that:
+     - Checks for entries past their auto-delete date
+     - Permanently removes expired entries
+     - Sends notifications before deletion (3 days, 1 day)
+   - Ensure deletion is permanent and unrecoverable
+
+### Database Schema Extensions
+
+```javascript
+// Example schema extension
+const VaultEntrySchema = new Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  title: { type: String, required: true },
+  category: { 
+    type: String, 
+    enum: ['Finance', 'Health', 'Personal', 'Notes'], 
+    required: true 
+  },
+  encryptedContent: { type: String, required: true },
+  fileUrl: { type: String },
+  fileMetadata: {
+    fileName: String,
+    fileType: String,
+    fileSize: Number,
+    encryptionIV: String
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+  autoDeleteAt: { type: Date },
+  visibility: {
+    type: { 
+      type: String, 
+      enum: ['private', 'shared_if_inactive', 'unlock_after'], 
+      default: 'private' 
+    },
+    inactiveDays: { type: Number },
+    unlockDate: { type: Date }
+  },
+  encryptionMetadata: {
+    algorithm: { type: String, default: 'AES' },
+    keyDerivation: { type: String, default: 'PBKDF2' },
+    iv: String
+  }
+});
+```
+
+## UI/UX Considerations
+
+1. **Entry States & Styling**
+   - New entries should have a "just created" visual indicator
+   - Entries approaching deletion should have warning indicators (yellow/red)
+   - Entries with special visibility settings should be visually distinct
+   - Use animation for encryption/decryption process
+
+2. **Feedback & Confirmation**
+   - Show encryption progress for larger entries
+   - Provide clear confirmation of successful operations
+   - Display meaningful error messages for encryption failures
+   - Confirm successful auto-delete setup
+
+3. **Entry Creation Experience**
+   - Step-by-step wizard for first-time users
+   - Quick-add for experienced users
+   - Templates for common entry types (password, medical info, personal document)
+   - Preview mode before finalizing encryption
+
+4. **Security Indicators**
+   - Visual lock/unlock animations when viewing sensitive content
+   - Session timeout warnings when entry is open
+   - Clipboard clearing confirmation after copying sensitive data
+   - "Secure viewing mode" toggle with masking options
+
+## Implementation Approach
+
+1. Start by extending your existing user interface with the entry creation form
+2. Implement the client-side encryption using crypto-js
+3. Create the backend API endpoints for CRUD operations
+4. Develop the entry list view with filtering and sorting
+5. Build the detailed entry view with decryption capabilities
+6. Implement the auto-deletion background process
+7. Add all notification and alert systems
+8. Test thoroughly with different entry types and settings
+
+## Security Best Practices
+
+- Never store encryption keys on the server
+- Implement proper CSRF protection for all forms
+- Use HTTPS for all API communications
+- Consider adding a "secure viewing mode" that prevents screenshots
+- Implement automatic session timeouts when viewing sensitive data
+- Add rate limiting to prevent brute force attacks
+- Log all access attempts for audit purposes
+
+## Testing Requirements
+
+- Test entry creation with various content types and sizes
+- Verify encryption/decryption works consistently
+- Confirm auto-deletion triggers correctly
+- Validate visibility settings function as expected
+- Test file upload and encryption with different file types
+- Ensure search and filtering works correctly
+- Verify that entries appear correctly in all views
