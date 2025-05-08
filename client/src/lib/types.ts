@@ -39,7 +39,7 @@ export interface TrustedContact {
   relationshipType: 'family' | 'friend' | 'legal' | 'medical' | 'other';
   status: 'pending' | 'active' | 'declined' | 'revoked';
   accessLevel: 'emergency_only' | 'full_access' | 'limited_access' | 'temporary_access';
-  inactivityPeriodDays: number;
+  inactivityPeriod: number;
   lastInactivityResetDate: string;
   createdAt: string;
   updatedAt: string;
