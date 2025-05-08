@@ -259,7 +259,7 @@ export default function TrustedContactPage() {
                           <FormLabel>Relationship</FormLabel>
                           <Select
                             onValueChange={field.onChange}
-                            defaultValue={field.value}
+                            defaultValue={field.value as string}
                           >
                             <FormControl>
                               <SelectTrigger>
@@ -311,7 +311,7 @@ export default function TrustedContactPage() {
                         <FormLabel>Waiting Period</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          defaultValue={field.value as string}
                         >
                           <FormControl>
                             <SelectTrigger>
