@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'wouter';
 import { Bell, Check, XCircle } from 'lucide-react';
 import { useNotifications } from '@/hooks/use-notifications';
 import { Notification } from '@/lib/types';
@@ -129,8 +130,8 @@ export function NotificationCenter() {
         
         <Separator />
         <div className="p-2 text-center">
-          <Button variant="link" size="sm" className="text-xs" asChild>
-            <a href="/notifications">View all notifications</a>
+          <Button variant="link" size="sm" className="text-xs" asChild onClick={() => setOpen(false)}>
+            <Link to="/notifications">View all notifications</Link>
           </Button>
         </div>
       </PopoverContent>

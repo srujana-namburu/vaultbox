@@ -13,7 +13,7 @@ import {
   SelectValue 
 } from '@/components/ui/select';
 import { 
-  CheckAll, 
+  CheckCheck,
   Loader2, 
   Trash2, 
   Bell, 
@@ -103,7 +103,7 @@ export default function NotificationsPage() {
             disabled={unreadCount === 0}
             onClick={() => markAllAsRead()}
           >
-            <CheckAll className="h-4 w-4 mr-2" />
+            <CheckCheck className="h-4 w-4 mr-2" />
             Mark all as read
           </Button>
           
