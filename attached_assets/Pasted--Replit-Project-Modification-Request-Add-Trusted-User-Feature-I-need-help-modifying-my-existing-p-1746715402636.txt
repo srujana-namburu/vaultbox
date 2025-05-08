@@ -1,0 +1,59 @@
+# Replit Project Modification Request: Add Trusted User Feature
+
+I need help modifying my existing project to add a "Trusted User" feature that focuses on emergency access and selective record sharing. Here are the specific requirements:
+
+## Core Trusted User Functionality:
+
+1. **Trusted Contact Setup:**
+   - Allow users to designate one trusted contact via email
+   - This trusted contact cannot access anything by default
+   - Access is only granted under two specific conditions:
+     - The primary user is inactive for a configurable period (X days)
+     - OR the primary user explicitly shares specific records
+
+2. **Emergency Unlock Flow:**
+   - Create a "Vault Request" page for trusted contacts
+   - Trusted contact provides their email and requests unlock
+   - System notifies vault owner: "Your trusted contact is attempting to access your vault"
+   - If vault owner doesn't log in within configured time period (default: 7 days):
+     - Selected/shared entries become visible to trusted contact
+
+3. **Activity Tracking:**
+   - Implement a system to track user login activity
+   - Reset inactivity timer whenever user logs in
+   - Track the configurable inactivity threshold (X days)
+
+## Implementation Requirements:
+
+1. **New Sidebar Navigation Item:**
+   - Add a new tab/link in the sidebar labeled "Trusted User"
+   - This should only be visible to users who are designated as trusted users for other accounts
+
+2. **New Trusted User Page:**
+   - Create a new page that displays when the "Trusted User" tab is clicked
+   - The page should show all data being shared with the current user from other accounts
+   - Display which users have designated the current user as their trusted user
+   - Show status of emergency access requests (pending/granted)
+
+3. **Data Display Requirements:**
+   - Show a list of accounts for which the current user is a trusted contact
+   - For each account, display what specific records are being shared
+   - Include timestamps for when access was granted
+   - Clearly distinguish between explicitly shared records and emergency access
+
+## Technical Context:
+- The project already has user authentication
+- Need data models to track:
+  - Trusted contact relationships
+  - Inactivity periods
+  - Emergency access requests
+  - Explicitly shared records
+- Ensure proper security measures so users can only see data explicitly shared with them
+
+## UI/UX Requirements:
+- The trusted user page should have a clean, organized layout
+- Include a header explaining what a trusted user is
+- Group shared data by the user who shared it
+- Clearly differentiate between emergency access and explicitly shared records
+
+Please help implement this in a way that integrates seamlessly with my existing code structure and UI design. Let me know if you need more information about my current project architecture to make appropriate modifications.
