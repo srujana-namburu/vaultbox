@@ -1,28 +1,46 @@
-export interface TrustedContact {
+// Type definitions matching our database schema
+export interface User {
   id: number;
-  userId: number;
-  name: string;
+  username: string;
   email: string;
-  relationship: 'family' | 'friend' | 'legal' | 'medical' | 'other';
-  inactivityPeriod: number;
-  waitingPeriod: string;
-  status: 'pending' | 'active' | 'declined' | 'revoked';
-  personalMessage?: string;
-  lastInactivityResetDate?: string;
+  name: string;
   createdAt: string;
-  updatedAt: string;
+  lastLoginAt?: string;
+  failedLoginAttempts: number;
+  isLockedOut: boolean;
+  isTwoFactorEnabled: boolean;
+  twoFactorSecret?: string;
+  status: 'active' | 'locked' | 'suspended' | 'unverified';
+  securityScore: number;
 }
 
 export interface VaultEntry {
   id: number;
   userId: number;
   title: string;
-  content: string;
+  description?: string;
   category: string;
+  encryptedData: string;
+  iv: string;
+  favorite: boolean;
   status: 'active' | 'locked' | 'shared' | 'expiring';
-  metadata?: Record<string, any>;
-  isFavorite: boolean;
-  expireAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  notes?: string;
+  metadata?: Record<string, string | number | boolean>;
+}
+
+export interface TrustedContact {
+  id: number;
+  userId: number;
+  name: string;
+  email: string;
+  phone?: string;
+  relationshipType: 'family' | 'friend' | 'legal' | 'medical' | 'other';
+  status: 'pending' | 'active' | 'declined' | 'revoked';
+  accessLevel: 'emergency_only' | 'full_access' | 'limited_access' | 'temporary_access';
+  inactivityPeriodDays: number;
+  lastInactivityResetDate: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,35 +51,18 @@ export interface AccessRequest {
   status: 'pending' | 'approved' | 'denied' | 'expired';
   reason: string;
   requestedAt: string;
-  respondedAt?: string;
   autoApproveAt: string;
-  expiresAt: string;
-  ipAddress?: string;
-  deviceInfo?: string;
-  urgencyLevel?: string;
+  responseNote?: string;
+  accessToken?: string;
+  accessExpiresAt?: string;
 }
 
 export interface SharedEntry {
   id: number;
   entryId: number;
   contactId: number;
-  accessLevel: 'emergency_only' | 'full_access' | 'limited_access' | 'temporary_access';
-  sharedAt: string;
-  expiresAt?: string;
-  metadata?: Record<string, any>;
-}
-
-export interface Notification {
-  id: number;
-  userId: number;
-  type: string;
-  title: string;
-  message: string;
-  isRead: boolean;
-  priority: 'critical' | 'high' | 'medium' | 'low';
-  actionUrl?: string;
-  metadata?: Record<string, any>;
-  expiresAt?: string;
+  isEmergencyAccessible: boolean;
+  shareExpirationDate?: string;
   createdAt: string;
 }
 
@@ -73,4 +74,15 @@ export interface ActivityLog {
   ipAddress?: string;
   deviceInfo?: string;
   timestamp: string;
+}
+
+export interface Notification {
+  id: number;
+  userId: number;
+  title: string;
+  message: string;
+  type: string;
+  isRead: boolean;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  createdAt: string;
 }

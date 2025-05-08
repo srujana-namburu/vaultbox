@@ -11,6 +11,8 @@ import EntryDetail from "@/pages/entry-detail";
 import NewEntry from "@/pages/new-entry";
 import AboutPage from "@/pages/about-page";
 import TrustedContactPage from "@/pages/trusted-contact-page";
+import EmergencyRequestPage from "@/pages/emergency-request-page";
+import EmergencyAccessPage from "@/pages/emergency-access-page";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { AuthProvider } from "@/hooks/use-auth";
 
@@ -18,6 +20,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/emergency-request" component={EmergencyRequestPage} />
+      <Route path="/emergency-access" component={EmergencyAccessPage} />
       <ProtectedRoute path="/" component={HomePage} />
       <ProtectedRoute path="/vault" component={VaultEntries} />
       <ProtectedRoute path="/entry/:id" component={EntryDetail} />

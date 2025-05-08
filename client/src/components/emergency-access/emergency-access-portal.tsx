@@ -86,7 +86,7 @@ export function EmergencyAccessPortal({ accessRequestId, contactId }: EmergencyA
   
   // Get unique categories from entries
   const categories = vaultEntries 
-    ? [...new Set(vaultEntries.map(entry => entry.category))]
+    ? Array.from(new Set(vaultEntries.map(entry => entry.category)))
     : [];
   
   // Handle view entry

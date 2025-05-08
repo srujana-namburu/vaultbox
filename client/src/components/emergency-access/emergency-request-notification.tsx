@@ -226,9 +226,9 @@ export function EmergencyRequestNotification({ userId }: EmergencyRequestNotific
                   <span className="text-sm">Status:</span>
                   <Badge variant={
                     selectedRequest.status === 'pending' ? 'outline' : 
-                    selectedRequest.status === 'approved' ? 'success' : 
+                    selectedRequest.status === 'approved' ? 'default' : 
                     selectedRequest.status === 'denied' ? 'destructive' : 'secondary'
-                  }>
+                  } className={selectedRequest.status === 'approved' ? "bg-green-600 hover:bg-green-700" : ""}>
                     {selectedRequest.status.charAt(0).toUpperCase() + selectedRequest.status.slice(1)}
                   </Badge>
                 </div>
