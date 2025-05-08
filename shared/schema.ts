@@ -273,6 +273,29 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow()
 });
 
+// Notification preferences
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  emailEnabled: boolean("email_enabled").default(true),
+  pushEnabled: boolean("push_enabled").default(true),
+  inAppEnabled: boolean("in_app_enabled").default(true),
+  emailFrequency: text("email_frequency").default('immediate'), // immediate, daily, weekly
+  securityAlertsEnabled: boolean("security_alerts_enabled").default(true),
+  activityAlertsEnabled: boolean("activity_alerts_enabled").default(true),
+  updatesEnabled: boolean("updates_enabled").default(true),
+  emailVerified: boolean("email_verified").default(false),
+  unsubscribeToken: text("unsubscribe_token"),
+  updatedAt: timestamp("updated_at").defaultNow()
+});
+
+export const notificationPreferencesRelations = relations(notificationPreferences, ({ one }) => ({
+  user: one(users, {
+    fields: [notificationPreferences.userId],
+    references: [users.id]
+  })
+}));
+
 export const notificationRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
@@ -370,6 +393,19 @@ export const insertUserDeviceSchema = createInsertSchema(userDevices).pick({
   isApproved: true
 });
 
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).pick({
+  userId: true,
+  emailEnabled: true,
+  pushEnabled: true,
+  inAppEnabled: true,
+  emailFrequency: true,
+  securityAlertsEnabled: true,
+  activityAlertsEnabled: true,
+  updatesEnabled: true,
+  emailVerified: true,
+  unsubscribeToken: true
+});
+
 // Type exports
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
@@ -400,3 +436,6 @@ export type UserDevice = typeof userDevices.$inferSelect;
 
 export type InsertEntryVersion = typeof entryVersions.$inferInsert;
 export type EntryVersion = typeof entryVersions.$inferSelect;
+
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type NotificationPreference = typeof notificationPreferences.$inferSelect;
