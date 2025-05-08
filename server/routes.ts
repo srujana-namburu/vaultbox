@@ -258,6 +258,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user!.id;
       const email = req.user!.email;
       
+      console.log('User email:', email);
+      
       // Find all contacts where this user's email matches with joined user data
       const contacts = await storage.db
         .select({
@@ -267,12 +269,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           accessLevel: trustedContacts.accessLevel,
           inactivityPeriod: trustedContacts.inactivityPeriod,
           lastInactivityResetDate: trustedContacts.lastInactivityResetDate,
-          ownerName: storage.db.dynamic.ref('full_name', 'users'),
-          ownerEmail: storage.db.dynamic.ref('email', 'users')
+          ownerName: users.full_name,
+          ownerEmail: users.email
         })
         .from(trustedContacts)
-        .innerJoin('users', eq(trustedContacts.user_id, storage.db.dynamic.ref('id', 'users')))
+        .innerJoin('users', eq(trustedContacts.user_id, users.id))
         .where(eq(trustedContacts.email, email));
+
+      console.log('Fetched contacts:', contacts);
 
       // Map the results to the expected format
       const accounts = contacts.map(contact => ({
