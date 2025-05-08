@@ -300,12 +300,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
           details: `Removed "${contactName}" from trusted contacts`
         });
         
+        // Create notification
+        await storage.createNotification({
+          userId,
+          title: "Trusted Contact Removed",
+          message: `${contactName} has been removed from your trusted contacts.`,
+          type: "contact_deleted",
+          priority: "medium"
+        });
+        
         return res.status(204).send();
       } else {
         return res.status(500).json({ message: "Failed to delete contact" });
       }
     } catch (err) {
       res.status(500).json({ message: "Failed to delete trusted contact" });
+    }
+  });
+  
+  // Trusted contact inactivity reset route
+  app.post("/api/trusted-contacts/:id/reset-inactivity", isAuthenticated, async (req, res) => {
+    try {
+      const contactId = parseInt(req.params.id);
+      const userId = req.user!.id;
+      
+      const contact = await storage.getTrustedContact(contactId);
+      
+      if (!contact) {
+        return res.status(404).json({ message: "Contact not found" });
+      }
+      
+      if (contact.userId !== userId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const updatedContact = await storage.updateTrustedContactInactivityReset(contactId);
+      
+      // Log activity
+      await storage.createActivityLog({
+        userId,
+        action: "inactivity_timer_reset",
+        details: `Reset inactivity timer for trusted contact "${contact.name}"`
+      });
+      
+      res.json(updatedContact);
+    } catch (err) {
+      res.status(500).json({ message: "Failed to reset inactivity timer" });
+    }
+  });
+  
+  // Emergency access request initiation route (for trusted contacts to use)
+  app.post("/api/emergency-access-request", async (req, res) => {
+    try {
+      const { email, targetUserEmail, reason } = req.body;
+      
+      if (!email || !targetUserEmail || !reason) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get the target user
+      const targetUser = await storage.getUserByEmail(targetUserEmail);
+      if (!targetUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Verify this person is a trusted contact for the target user
+      const contact = await storage.getTrustedContactByEmail(targetUser.id, email);
+      if (!contact) {
+        return res.status(403).json({ message: "You are not a trusted contact for this user" });
+      }
+      
+      // Create an access request
+      const accessRequest = await storage.createAccessRequest({
+        contactId: contact.id,
+        reason,
+        status: 'pending'
+      });
+      
+      // Create a notification for the vault owner
+      await storage.createNotification({
+        userId: targetUser.id,
+        title: "Emergency Access Request",
+        message: `${contact.name} has requested emergency access to your vault. Review this request as soon as possible.`,
+        type: "emergency_access_requested",
+        priority: "critical"
+      });
+      
+      // Log the activity for the target user
+      await storage.createActivityLog({
+        userId: targetUser.id,
+        action: "emergency_access_requested",
+        details: `${contact.name} requested emergency access to your vault`,
+        ipAddress: req.ip,
+        deviceInfo: req.headers['user-agent']
+      });
+      
+      res.status(201).json({ 
+        message: "Emergency access request created successfully",
+        requestId: accessRequest.id,
+        autoApproveAt: accessRequest.autoApproveAt
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create emergency access request" });
     }
   });
 
@@ -571,8 +667,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log activity
       await storage.createActivityLog({
         userId,
-        action: "security_alert",
-        details: `${status.charAt(0).toUpperCase() + status.slice(1)} access request from ${contact.name}`,
+        action: status === 'approved' ? "emergency_access_granted" : "emergency_access_denied",
+        details: `${status === 'approved' ? 'Approved' : 'Denied'} emergency access request from ${contact.name}`,
         ipAddress: req.ip,
         deviceInfo: req.headers['user-agent']
       });
@@ -580,10 +676,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification
       await storage.createNotification({
         userId,
-        title: "Access Request Response",
-        message: `You have ${status} an access request from ${contact.name}`,
-        type: "security_alert",
-        priority: "high"
+        title: `Emergency Access ${status === 'approved' ? 'Granted' : 'Denied'}`,
+        message: `You have ${status === 'approved' ? 'granted' : 'denied'} emergency access to ${contact.name}.`,
+        type: "emergency_access_response",
+        priority: "critical"
       });
       
       res.json(updatedRequest);
@@ -592,6 +688,100 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Check inactivity status for emergency access - used by background process
+  app.get("/api/trusted-contacts/check-inactivity", async (req, res) => {
+    try {
+      const authToken = req.headers.authorization?.split(' ')[1];
+      
+      // Very simple auth check for system processes
+      // In production, this would use a proper API key system
+      if (authToken !== process.env.SYSTEM_API_KEY) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Get all trusted contacts
+      const db = storage.db;
+      const contacts = await db
+        .select()
+        .from(trustedContacts)
+        .where(
+          and(
+            eq(trustedContacts.status, 'active'),
+            isNotNull(trustedContacts.lastInactivityResetDate)
+          )
+        );
+      
+      const now = new Date();
+      const processedContacts = [];
+      
+      // Process each contact for inactivity
+      for (const contact of contacts) {
+        if (!contact.lastInactivityResetDate || !contact.waitingPeriod) continue;
+        
+        // Parse waiting period (assuming format like "30 days" or "24 hours")
+        let waitingHours = 24; // Default to 24 hours
+        const waitingPeriod = contact.waitingPeriod;
+        const match = waitingPeriod.match(/(\d+)\s*(hour|hours|day|days)/i);
+        
+        if (match) {
+          const value = parseInt(match[1]);
+          const unit = match[2].toLowerCase();
+          
+          if (unit === 'hour' || unit === 'hours') {
+            waitingHours = value;
+          } else if (unit === 'day' || unit === 'days') {
+            waitingHours = value * 24;
+          }
+        }
+        
+        // Calculate inactivity threshold
+        const lastReset = new Date(contact.lastInactivityResetDate);
+        const thresholdMs = waitingHours * 60 * 60 * 1000;
+        const hasExceededThreshold = (now.getTime() - lastReset.getTime()) > thresholdMs;
+        
+        if (hasExceededThreshold) {
+          // User is considered inactive, create automatic emergency access
+          const accessRequest = await storage.createAccessRequest({
+            contactId: contact.id,
+            reason: "Automated emergency access due to user inactivity",
+            status: 'pending'
+          });
+          
+          // Create notification for the user
+          await storage.createNotification({
+            userId: contact.userId,
+            title: "Emergency Access Triggered",
+            message: `Due to inactivity, an emergency access request has been automatically created for ${contact.name}. They will gain access after the waiting period.`,
+            type: "emergency_access_triggered",
+            priority: "critical"
+          });
+          
+          // Log the activity
+          await storage.createActivityLog({
+            userId: contact.userId,
+            action: "emergency_access_triggered",
+            details: `Automatic emergency access triggered due to inactivity for ${contact.name}`
+          });
+          
+          processedContacts.push({
+            contactId: contact.id,
+            contactName: contact.name,
+            userId: contact.userId,
+            accessRequestId: accessRequest.id,
+            autoApproveAt: accessRequest.autoApproveAt
+          });
+        }
+      }
+      
+      res.json({
+        processedCount: processedContacts.length,
+        processedContacts
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to check inactivity status" });
+    }
+  });
+  
   // Database status check endpoint
   app.get("/api/health/db", async (req, res) => {
     try {
