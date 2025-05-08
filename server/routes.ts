@@ -252,7 +252,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trusted contacts routes
+  // Trusted accounts (where user is a trusted contact) route
+  app.get("/api/trusted-accounts/as-contact", isAuthenticated, async (req, res) => {
+    try {
+      const userId = req.user!.id;
+      const email = req.user!.email;
+      
+      // Find all contacts where this user's email matches
+      const contacts = await db
+        .select()
+        .from(trustedContacts)
+        .where(eq(trustedContacts.email, email));
+
+      // Get full details for each account where user is a contact
+      const accounts = [];
+      for (const contact of contacts) {
+        const owner = await storage.getUser(contact.userId);
+        if (owner) {
+          accounts.push({
+            id: contact.id,
+            ownerName: owner.fullName,
+            ownerEmail: owner.email,
+            status: contact.status,
+            accessLevel: contact.accessLevel,
+            inactivityThreshold: contact.inactivityPeriod,
+            daysSinceLastActivity: Math.floor(
+              (Date.now() - new Date(contact.lastInactivityResetDate).getTime()) / 
+              (1000 * 60 * 60 * 24)
+            )
+          });
+        }
+      }
+      
+      res.json(accounts);
+    } catch (err) {
+      console.error("Error fetching trusted accounts:", err);
+      res.status(500).json({ message: "Failed to fetch trusted accounts" });
+    }
+  });
+
+  // Trusted contacts routes  
   app.get("/api/trusted-contacts", isAuthenticated, async (req, res) => {
     try {
       const userId = req.user!.id;

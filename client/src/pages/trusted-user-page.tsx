@@ -1,7 +1,6 @@
-
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, Shield, Lock } from "lucide-react";
+import { Loader2, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Sidebar } from "@/components/ui/sidebar";
 import { MobileNav } from "@/components/ui/mobile-nav";
@@ -9,11 +8,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { format } from "date-fns";
 
 export default function TrustedUserPage() {
   const { user } = useAuth();
-  const [selectedAccount, setSelectedAccount] = useState<number | null>(null);
 
   const { data: trustedAccounts, isLoading } = useQuery({
     queryKey: ['trusted-accounts'],
@@ -48,77 +45,45 @@ export default function TrustedUserPage() {
               </div>
 
               <div className="grid gap-6">
-                {trustedAccounts?.map((account: any) => (
-                  <Card key={account.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle>{account.ownerName}</CardTitle>
-                          <CardDescription>{account.ownerEmail}</CardDescription>
-                        </div>
-                        <Badge variant={account.status === 'active' ? 'default' : 'outline'}>
-                          {account.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <div className="flex justify-between mb-2">
-                            <span className="text-sm font-medium">Inactivity Period</span>
-                            <span className="text-sm text-muted-foreground">
-                              {account.daysSinceLastActivity} / {account.inactivityThreshold} days
-                            </span>
-                          </div>
-                          <Progress 
-                            value={(account.daysSinceLastActivity / account.inactivityThreshold) * 100} 
-                          />
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-2">
+                {trustedAccounts?.length > 0 ? (
+                  trustedAccounts.map((account: any) => (
+                    <Card key={account.id}>
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Shared Records</h4>
-                            {account.sharedRecords?.length > 0 ? (
-                              <ul className="space-y-2">
-                                {account.sharedRecords.map((record: any) => (
-                                  <li key={record.id} className="flex items-center gap-2">
-                                    <Lock className="h-4 w-4" />
-                                    <span className="text-sm">{record.title}</span>
-                                    <Badge variant="outline" className="ml-auto">
-                                      Shared {format(new Date(record.sharedAt), 'MMM d, yyyy')}
-                                    </Badge>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">No records shared yet</p>
-                            )}
+                            <CardTitle>{account.ownerName}</CardTitle>
+                            <CardDescription>{account.ownerEmail}</CardDescription>
+                          </div>
+                          <Badge variant={account.status === 'active' ? 'default' : 'outline'}>
+                            {account.status}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <div>
+                            <div className="flex justify-between mb-2">
+                              <span className="text-sm font-medium">Inactivity Period</span>
+                              <span className="text-sm text-muted-foreground">
+                                {account.daysSinceLastActivity} / {account.inactivityThreshold} days
+                              </span>
+                            </div>
+                            <Progress 
+                              value={(account.daysSinceLastActivity / account.inactivityThreshold) * 100} 
+                            />
                           </div>
 
                           <div>
-                            <h4 className="text-sm font-medium mb-2">Emergency Access</h4>
-                            {account.emergencyAccess ? (
-                              <div className="space-y-2">
-                                <Badge variant="secondary">
-                                  {account.emergencyAccess.status}
-                                </Badge>
-                                <p className="text-sm">
-                                  Request made on {format(new Date(account.emergencyAccess.requestedAt), 'MMM d, yyyy')}
-                                </p>
-                              </div>
-                            ) : (
-                              <Button variant="outline" size="sm">
-                                Request Emergency Access
-                              </Button>
-                            )}
+                            <h4 className="text-sm font-medium mb-2">Access Level</h4>
+                            <Badge variant="secondary">
+                              {account.accessLevel}
+                            </Badge>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-
-                {(!trustedAccounts || trustedAccounts.length === 0) && (
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
                   <Card>
                     <CardContent className="flex flex-col items-center justify-center p-6">
                       <Shield className="h-12 w-12 text-muted-foreground mb-4" />
