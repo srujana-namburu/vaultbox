@@ -23,7 +23,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 const trustedContactSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
-  relationship: z.enum(["family", "friend", "legal", "medical", "other"]),
+  relationshipType: z.enum(["family", "friend", "legal", "medical", "other"]),
   inactivityPeriod: z.number().min(1, { message: "Inactivity period must be at least 1 day" }),
   personalMessage: z.string().optional(),
   waitingPeriod: z.string()
@@ -52,7 +52,7 @@ export default function TrustedContactPage() {
     defaultValues: {
       name: "",
       email: "",
-      relationship: "other",
+      relationshipType: "other",
       inactivityPeriod: 30,
       personalMessage: "",
       waitingPeriod: "24 hours"
@@ -66,8 +66,8 @@ export default function TrustedContactPage() {
       form.reset({
         name: contact.name,
         email: contact.email,
-        relationship: contact.relationshipType,
-        inactivityPeriod: Number(contact.inactivityPeriodDays),
+        relationshipType: contact.relationshipType,
+        inactivityPeriod: Number(contact.inactivityPeriod),
         personalMessage: "",
         waitingPeriod: "48 hours" // Default 48 hours
       });
@@ -117,7 +117,7 @@ export default function TrustedContactPage() {
       form.reset({
         name: "",
         email: "",
-        relationship: "other",
+        relationshipType: "other",
         inactivityPeriod: 30,
         personalMessage: "",
         waitingPeriod: "24 hours"
@@ -184,7 +184,7 @@ export default function TrustedContactPage() {
     }
     
     const daysSinceReset = calculateDaysSinceReset();
-    const inactivityPeriod = trustedContact[0].inactivityPeriodDays;
+    const inactivityPeriod = trustedContact[0].inactivityPeriod;
     
     return Math.min(100, Math.round((daysSinceReset / inactivityPeriod) * 100));
   };
@@ -253,7 +253,7 @@ export default function TrustedContactPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <FormField
                       control={form.control}
-                      name="relationship"
+                      name="relationshipType"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Relationship</FormLabel>
@@ -390,12 +390,12 @@ export default function TrustedContactPage() {
                         <div className="flex items-center justify-between">
                           <div className="font-medium">Inactivity Timer</div>
                           <div className="text-sm text-muted-foreground">
-                            {daysSinceReset} of {trustedContact[0].inactivityPeriodDays} days
+                            {daysSinceReset} of {trustedContact[0].inactivityPeriod} days
                           </div>
                         </div>
                         <Progress value={progressPercentage} className="h-2" />
                         <p className="text-sm text-muted-foreground">
-                          {trustedContact[0].inactivityPeriodDays - daysSinceReset} days remaining before emergency access can be requested
+                          {trustedContact[0].inactivityPeriod - daysSinceReset} days remaining before emergency access can be requested
                         </p>
                       </div>
                       
