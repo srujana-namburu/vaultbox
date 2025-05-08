@@ -12,7 +12,8 @@ import {
   insertUserDeviceSchema,
   insertNotificationPreferencesSchema,
   trustedContacts,
-  accessRequests
+  accessRequests,
+  users
 } from "@shared/schema";
 import { eq, asc, and, desc, sql, isNotNull } from "drizzle-orm";
 import { ZodError } from "zod";
