@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { 
@@ -15,10 +15,34 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { NotificationCenter } from "@/components/notifications/notification-center";
+import { SlidingNumber } from "./sliding-number";
 
 export function Sidebar() {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const [timer, setTimer] = useState(30 * 60); // 30 minutes in seconds
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const prevLocation = useRef(location);
+
+  // Reset timer on navigation
+  useEffect(() => {
+    if (prevLocation.current !== location) {
+      setTimer(30 * 60);
+      prevLocation.current = location;
+    }
+  }, [location]);
+
+  // Countdown effect
+  useEffect(() => {
+    if (timer <= 0) {
+      logoutMutation.mutate();
+      return;
+    }
+    timerRef.current = setTimeout(() => setTimer(t => t - 1), 1000);
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [timer, logoutMutation]);
   
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -41,6 +65,10 @@ export function Sidebar() {
     { icon: <ShieldCheck size={20} />, label: "About", path: "/about" }
   ];
 
+  // Remove formatTime and use SlidingNumber for timer display
+  const minutes = Math.floor(timer / 60);
+  const seconds = timer % 60;
+
   return (
     <aside className="hidden lg:flex lg:flex-col w-64 bg-primary/70 backdrop-blur-md shadow-neumorphic h-screen">
       <div className="p-4">
@@ -51,7 +79,6 @@ export function Sidebar() {
           VaultBox
         </h1>
       </div>
-      
       <nav className="flex-1 overflow-y-auto px-2 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
@@ -72,10 +99,17 @@ export function Sidebar() {
           ))}
         </div>
       </nav>
-      
       {user && (
         <div className="p-4">
-          <Separator className="mb-4 bg-[#1E293B]" />
+          <div className="mb-2 flex justify-center">
+            <div className="border-2 border-red-500 bg-red-900/20 rounded-xl px-4 py-2 text-xs text-red-400 font-mono flex items-center gap-1 shadow-glow">
+              Session Timeout:
+              <span className="text-red-300 font-bold flex items-center gap-1">
+                <SlidingNumber value={minutes} padStart />:<SlidingNumber value={seconds} padStart />
+              </span>
+            </div>
+          </div>
+          <Separator className="mb-2 bg-[#1E293B]" />
           <div className="flex items-center p-3 bg-[#1E293B]/70 rounded-lg">
             <Avatar className="h-10 w-10">
               <AvatarFallback className="bg-secondary/20 text-secondary">

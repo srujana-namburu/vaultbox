@@ -66,7 +66,6 @@ export default function HomePage() {
   
   return (
     <div className="flex flex-col h-screen overflow-hidden">
-      <TopNavbar location={location} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
         <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
@@ -290,52 +289,5 @@ export default function HomePage() {
         </main>
       </div>
     </div>
-  );
-}
-
-function TopNavbar({ location }: { location: string }) {
-  const navLinks = [
-    { label: "Dashboard", path: "/" },
-    { label: "My Vault", path: "/vault" },
-    { label: "Trusted Contacts", path: "/trusted-contacts" },
-    { label: "Activity Log", path: "/activity" },
-    { label: "Settings", path: "/settings" },
-    { label: "About", path: "/about" },
-  ];
-  return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-[#101828]/90 backdrop-blur-md shadow-lg transition-all duration-500 animate-navbar-slide-in">
-      <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <span className="font-montserrat font-bold text-xl text-secondary tracking-wide">VaultBox</span>
-        </div>
-        <div className="flex items-center space-x-2 md:space-x-6">
-          {navLinks.map(link => (
-            <Link
-              key={link.path}
-              href={link.path}
-              className={`px-3 py-1 rounded-lg font-medium transition-all duration-300 hover:bg-secondary/20 hover:text-secondary ${location === link.path ? 'bg-secondary/20 text-secondary shadow-glow' : 'text-white'}`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </div>
-      <style>{`
-        @keyframes navbar-slide-in {
-          from { transform: translateY(-100%); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-navbar-slide-in {
-          animation: navbar-slide-in 0.7s cubic-bezier(0.4,0,0.2,1);
-        }
-        .animate-fade-in {
-          animation: fade-in 0.5s cubic-bezier(0.4,0,0.2,1);
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </nav>
   );
 }

@@ -42,7 +42,8 @@ type TwoFactorData = {
 type TwoFactorSetupResult = {
   secret: string;
   qrCode: string;
-  recoveryCodes: string[];
+  recoveryKeys: string[];
+  recoveryCodes?: string[];
 };
 
 type RegisterData = {

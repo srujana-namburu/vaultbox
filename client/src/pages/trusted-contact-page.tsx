@@ -8,6 +8,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { TrustedContact } from "@/lib/types";
+import { useLocation } from "wouter";
+import { Sidebar } from "@/components/ui/sidebar";
+import { MobileNav } from "@/components/ui/mobile-nav";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +38,7 @@ export default function TrustedContactPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isRemoving, setIsRemoving] = useState(false);
+  const [location] = useLocation();
   
   // Fetch the user's trusted contact
   const { 
@@ -194,349 +198,359 @@ export default function TrustedContactPage() {
   const progressPercentage = calculateProgress();
 
   return (
-    <div className="container py-8">
-      <div className="flex flex-col space-y-2 mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Trusted Contact</h1>
-        <p className="text-muted-foreground">
-          Manage your emergency access trusted contact who can access your vault entries under specific conditions.
-        </p>
-      </div>
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <main className="flex-1 overflow-y-auto pb-16 lg:pb-0">
+          <MobileNav />
+          <div className="p-4 lg:p-8">
+            <div className="w-full max-w-4xl mx-auto">
+              <div className="flex flex-col space-y-2 mb-8">
+                <h1 className="text-3xl font-bold tracking-tight">Trusted Contact</h1>
+                <p className="text-muted-foreground">
+                  Manage your emergency access trusted contact who can access your vault entries under specific conditions.
+                </p>
+              </div>
 
-      <div className="grid gap-8 md:grid-cols-3">
-        <div className="md:col-span-2">
-          <Tabs defaultValue={hasContact ? "manage" : "add"}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="add" disabled={addContactMutation.isPending}>
-                {hasContact ? "Edit Contact" : "Add Contact"}
-              </TabsTrigger>
-              <TabsTrigger value="manage" disabled={!hasContact}>
-                Manage Access
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="add" className="space-y-4 pt-4">
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="John Doe" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="contact@example.com" {...field} />
-                          </FormControl>
-                          <FormDescription>
-                            An invitation will be sent to this email.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="relationshipType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Relationship</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value as string}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select relationship" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="family">Family</SelectItem>
-                              <SelectItem value="friend">Friend</SelectItem>
-                              <SelectItem value="legal">Legal Representative</SelectItem>
-                              <SelectItem value="medical">Medical Professional</SelectItem>
-                              <SelectItem value="other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="inactivityPeriod"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Inactivity Period (days)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={365}
-                              {...field}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Days of inactivity before emergency access is triggered.
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <FormField
-                    control={form.control}
-                    name="waitingPeriod"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Waiting Period</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          defaultValue={field.value as string}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select waiting period" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="24 hours">24 hours</SelectItem>
-                            <SelectItem value="48 hours">48 hours</SelectItem>
-                            <SelectItem value="3 days">3 days</SelectItem>
-                            <SelectItem value="7 days">7 days</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormDescription>
-                          Time your contact must wait after requesting emergency access.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="personalMessage"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Personal Message (Optional)</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Add a personal message for your trusted contact"
-                            className="resize-none"
-                            rows={4}
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex items-center justify-between pt-4">
-                    <Button 
-                      type="button" 
-                      variant="destructive" 
-                      onClick={() => setIsRemoving(true)}
-                      disabled={!hasContact || removeContactMutation.isPending}
-                    >
-                      {removeContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Remove Contact
-                    </Button>
+              <div className="grid gap-8 md:grid-cols-3">
+                <div className="md:col-span-2">
+                  <Tabs defaultValue={hasContact ? "manage" : "add"}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="add" disabled={addContactMutation.isPending}>
+                        {hasContact ? "Edit Contact" : "Add Contact"}
+                      </TabsTrigger>
+                      <TabsTrigger value="manage" disabled={!hasContact}>
+                        Manage Access
+                      </TabsTrigger>
+                    </TabsList>
                     
-                    <Button 
-                      type="submit" 
-                      disabled={addContactMutation.isPending}
-                    >
-                      {addContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {hasContact ? "Update Contact" : "Add Contact"}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
-            </TabsContent>
-            
-            <TabsContent value="manage" className="space-y-4 pt-4">
-              {hasContact ? (
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Emergency Access Settings</CardTitle>
-                      <CardDescription>
-                        Configure how your trusted contact can access your vault in an emergency
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="font-medium">Inactivity Timer</div>
-                          <div className="text-sm text-muted-foreground">
-                            {daysSinceReset} of {trustedContact[0].inactivityPeriod} days
+                    <TabsContent value="add" className="space-y-4 pt-4">
+                      <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="name"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Name</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="John Doe" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="email"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Email</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="contact@example.com" {...field} />
+                                  </FormControl>
+                                  <FormDescription>
+                                    An invitation will be sent to this email.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <FormField
+                              control={form.control}
+                              name="relationshipType"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Relationship</FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value as string}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="Select relationship" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem value="family">Family</SelectItem>
+                                      <SelectItem value="friend">Friend</SelectItem>
+                                      <SelectItem value="legal">Legal Representative</SelectItem>
+                                      <SelectItem value="medical">Medical Professional</SelectItem>
+                                      <SelectItem value="other">Other</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="inactivityPeriod"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Inactivity Period (days)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={365}
+                                      {...field}
+                                      onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                    />
+                                  </FormControl>
+                                  <FormDescription>
+                                    Days of inactivity before emergency access is triggered.
+                                  </FormDescription>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          <FormField
+                            control={form.control}
+                            name="waitingPeriod"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Waiting Period</FormLabel>
+                                <Select
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value as string}
+                                >
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Select waiting period" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="24 hours">24 hours</SelectItem>
+                                    <SelectItem value="48 hours">48 hours</SelectItem>
+                                    <SelectItem value="3 days">3 days</SelectItem>
+                                    <SelectItem value="7 days">7 days</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormDescription>
+                                  Time your contact must wait after requesting emergency access.
+                                </FormDescription>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="personalMessage"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Personal Message (Optional)</FormLabel>
+                                <FormControl>
+                                  <Textarea
+                                    placeholder="Add a personal message for your trusted contact"
+                                    className="resize-none"
+                                    rows={4}
+                                    {...field}
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          
+                          <div className="flex items-center justify-between pt-4">
+                            <Button 
+                              type="button" 
+                              variant="destructive" 
+                              onClick={() => setIsRemoving(true)}
+                              disabled={!hasContact || removeContactMutation.isPending}
+                            >
+                              {removeContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              Remove Contact
+                            </Button>
+                            
+                            <Button 
+                              type="submit" 
+                              disabled={addContactMutation.isPending}
+                            >
+                              {addContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                              {hasContact ? "Update Contact" : "Add Contact"}
+                            </Button>
+                          </div>
+                        </form>
+                      </Form>
+                    </TabsContent>
+                    
+                    <TabsContent value="manage" className="space-y-4 pt-4">
+                      {hasContact ? (
+                        <div className="space-y-6">
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Emergency Access Settings</CardTitle>
+                              <CardDescription>
+                                Configure how your trusted contact can access your vault in an emergency
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="font-medium">Inactivity Timer</div>
+                                  <div className="text-sm text-muted-foreground">
+                                    {daysSinceReset} of {trustedContact[0].inactivityPeriod} days
+                                  </div>
+                                </div>
+                                <Progress value={progressPercentage} className="h-2" />
+                                <p className="text-sm text-muted-foreground">
+                                  {trustedContact[0].inactivityPeriod - daysSinceReset} days remaining before emergency access can be requested
+                                </p>
+                              </div>
+                              
+                              <Button 
+                                onClick={() => resetInactivityMutation.mutate()} 
+                                disabled={resetInactivityMutation.isPending}
+                                variant="outline"
+                                className="w-full"
+                              >
+                                {resetInactivityMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Reset Inactivity Timer
+                              </Button>
+                              
+                              <Alert className={progressPercentage > 75 ? "border-destructive" : ""}>
+                                <Activity className="h-4 w-4" />
+                                <AlertTitle>
+                                  {progressPercentage > 75 ? "Warning: Approaching Inactivity Threshold" : "Inactivity Status"}
+                                </AlertTitle>
+                                <AlertDescription>
+                                  {progressPercentage > 75 
+                                    ? "Your account is approaching the inactivity threshold. Login regularly to reset the timer."
+                                    : "Your inactivity timer is active. Login regularly to prevent emergency access triggers."}
+                                </AlertDescription>
+                              </Alert>
+                            </CardContent>
+                          </Card>
+                          
+                          <Card>
+                            <CardHeader>
+                              <CardTitle>Waiting Period</CardTitle>
+                              <CardDescription>
+                                Time your contact must wait after requesting emergency access
+                              </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-5 w-5 text-muted-foreground" />
+                                  <span>48 hours</span>
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  onClick={() => form.setFocus("waitingPeriod")}
+                                  className="text-xs"
+                                >
+                                  Change
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center p-8">
+                          <div className="text-center">
+                            <Shield className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-medium">No Trusted Contact</h3>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                              Add a trusted contact first to manage emergency access settings.
+                            </p>
                           </div>
                         </div>
-                        <Progress value={progressPercentage} className="h-2" />
-                        <p className="text-sm text-muted-foreground">
-                          {trustedContact[0].inactivityPeriod - daysSinceReset} days remaining before emergency access can be requested
-                        </p>
-                      </div>
-                      
-                      <Button 
-                        onClick={() => resetInactivityMutation.mutate()} 
-                        disabled={resetInactivityMutation.isPending}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        {resetInactivityMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Reset Inactivity Timer
-                      </Button>
-                      
-                      <Alert className={progressPercentage > 75 ? "border-destructive" : ""}>
-                        <Activity className="h-4 w-4" />
-                        <AlertTitle>
-                          {progressPercentage > 75 ? "Warning: Approaching Inactivity Threshold" : "Inactivity Status"}
-                        </AlertTitle>
-                        <AlertDescription>
-                          {progressPercentage > 75 
-                            ? "Your account is approaching the inactivity threshold. Login regularly to reset the timer."
-                            : "Your inactivity timer is active. Login regularly to prevent emergency access triggers."}
-                        </AlertDescription>
-                      </Alert>
-                    </CardContent>
-                  </Card>
-                  
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+                
+                <div>
                   <Card>
                     <CardHeader>
-                      <CardTitle>Waiting Period</CardTitle>
-                      <CardDescription>
-                        Time your contact must wait after requesting emergency access
-                      </CardDescription>
+                      <CardTitle>What is a Trusted Contact?</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-5 w-5 text-muted-foreground" />
-                          <span>48 hours</span>
+                    <CardContent className="space-y-4">
+                      <p className="text-sm">
+                        A trusted contact is someone you designate to access your vault entries in case of emergency.
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-start">
+                          <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
+                          <p className="text-sm">They can only access entries you've explicitly shared or after a period of inactivity.</p>
                         </div>
-                        <Button
-                          variant="outline"
-                          onClick={() => form.setFocus("waitingPeriod")}
-                          className="text-xs"
-                        >
-                          Change
-                        </Button>
+                        
+                        <div className="flex items-start">
+                          <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
+                          <p className="text-sm">The inactivity timer resets every time you log in to your account.</p>
+                        </div>
+                        
+                        <div className="flex items-start">
+                          <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
+                          <p className="text-sm">Your trusted contact must wait for a specified period after requesting access.</p>
+                        </div>
+                        
+                        <div className="flex items-start">
+                          <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
+                          <p className="text-sm">You'll receive notifications of any access requests or changes.</p>
+                        </div>
                       </div>
                     </CardContent>
+                    <CardFooter>
+                      <Button
+                        variant="link"
+                        onClick={() => {
+                          // Maybe link to more detailed documentation
+                          toast({
+                            title: "Information",
+                            description: "Learn more about trusted contacts and how they work."
+                          });
+                        }}
+                        className="px-0"
+                      >
+                        Learn more about trusted contacts
+                      </Button>
+                    </CardFooter>
                   </Card>
                 </div>
-              ) : (
-                <div className="flex items-center justify-center p-8">
-                  <div className="text-center">
-                    <Shield className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <h3 className="mt-4 text-lg font-medium">No Trusted Contact</h3>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      Add a trusted contact first to manage emergency access settings.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-        
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle>What is a Trusted Contact?</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm">
-                A trusted contact is someone you designate to access your vault entries in case of emergency.
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex items-start">
-                  <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
-                  <p className="text-sm">They can only access entries you've explicitly shared or after a period of inactivity.</p>
-                </div>
-                
-                <div className="flex items-start">
-                  <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
-                  <p className="text-sm">The inactivity timer resets every time you log in to your account.</p>
-                </div>
-                
-                <div className="flex items-start">
-                  <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
-                  <p className="text-sm">Your trusted contact must wait for a specified period after requesting access.</p>
-                </div>
-                
-                <div className="flex items-start">
-                  <ChevronRight className="h-5 w-5 mr-2 text-primary flex-shrink-0" />
-                  <p className="text-sm">You'll receive notifications of any access requests or changes.</p>
-                </div>
               </div>
-            </CardContent>
-            <CardFooter>
-              <Button
-                variant="link"
-                onClick={() => {
-                  // Maybe link to more detailed documentation
-                  toast({
-                    title: "Information",
-                    description: "Learn more about trusted contacts and how they work."
-                  });
-                }}
-                className="px-0"
-              >
-                Learn more about trusted contacts
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
 
-      {/* Confirmation Dialog for Removing Contact */}
-      <Dialog open={isRemoving} onOpenChange={setIsRemoving}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove Trusted Contact</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove this trusted contact? They will no longer have emergency access to your vault.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRemoving(false)}>
-              Cancel
-            </Button>
-            <Button 
-              variant="destructive" 
-              onClick={() => removeContactMutation.mutate()}
-              disabled={removeContactMutation.isPending}
-            >
-              {removeContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {/* Confirmation Dialog for Removing Contact */}
+              <Dialog open={isRemoving} onOpenChange={setIsRemoving}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Remove Trusted Contact</DialogTitle>
+                    <DialogDescription>
+                      Are you sure you want to remove this trusted contact? They will no longer have emergency access to your vault.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsRemoving(false)}>
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      onClick={() => removeContactMutation.mutate()}
+                      disabled={removeContactMutation.isPending}
+                    >
+                      {removeContactMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Remove
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }
