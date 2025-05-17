@@ -49,7 +49,7 @@ In an era of increasing digital threats, Vaultr emerged from the need to create 
 ## System Requirements 🛠️
 ### Hardware Requirements
 - Minimum 4GB RAM
-- Modern web browser (Chrome, Firefox, Safari, Edge)
+- Modern web browser (Chrome, Firefox, Safari)
 - Stable internet connection
 
 ### Software Prerequisites
